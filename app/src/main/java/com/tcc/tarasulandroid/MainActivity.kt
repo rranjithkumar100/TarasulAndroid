@@ -8,7 +8,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Scaffold
 import androidx.compose.ui.Modifier
-import com.tcc.tarasulandroid.feature.permissions.PermissionsTestScreen
+import com.tcc.tarasulandroid.feature.debug.RealtimeDebugScreen
 import com.tcc.tarasulandroid.ui.base.BaseActivity
 import com.tcc.tarasulandroid.ui.theme.TarasulAndroidTheme
 import com.tcc.tarasulandroid.viewmodels.LoginViewModel
@@ -25,7 +25,7 @@ class MainActivity : BaseActivity() {
         setContent {
             TarasulAndroidTheme {
                 Scaffold(modifier = Modifier.fillMaxSize()) { innerPadding ->
-                    PermissionsTestScreen(
+                    RealtimeDebugScreen(
                         modifier = Modifier.padding(innerPadding)
                     )
                 }

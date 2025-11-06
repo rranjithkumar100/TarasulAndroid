@@ -21,4 +21,4 @@ dependencyResolutionManagement {
 
 rootProject.name = "TarasulAndroid"
 include(":app")
- 
+include(":core:realtime")
