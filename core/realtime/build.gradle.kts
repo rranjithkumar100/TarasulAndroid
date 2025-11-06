@@ -15,7 +15,7 @@ android {
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         consumerProguardFiles("consumer-rules.pro")
-        buildConfigField("String", "BASE_SOCKET_URL", "\"https://dev.socket.example.com/\"")
+        buildConfigField("String", "BASE_SOCKET_URL", "\"https://socket-io-chat.glitch.me/\"")
     }
 
     buildFeatures {
@@ -29,7 +29,7 @@ android {
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
             )
-            buildConfigField("String", "BASE_SOCKET_URL", "\"https://socket.example.com/\"")
+            buildConfigField("String", "BASE_SOCKET_URL", "\"https://socket-io-chat.glitch.me/\"")
         }
     }
     compileOptions {

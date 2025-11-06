@@ -13,4 +13,7 @@
     <domain-config cleartextTrafficPermitted="true">
         <domain includeSubdomains="true">10.0.2.2</domain>
     </domain-config>
+    <domain-config>
+        <domain includeSubdomains="true">socket-io-chat.glitch.me</domain>
+    </domain-config>
 </network-security-config>

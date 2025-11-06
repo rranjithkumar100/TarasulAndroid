@@ -22,17 +22,17 @@ android {
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         
         buildConfigField("String", "BASE_API_URL", "\"https://dev.api.example.com/\"")
-        buildConfigField("String", "BASE_SOCKET_URL", "\"https://dev.socket.example.com/\"")
+        buildConfigField("String", "BASE_SOCKET_URL", "\"https://socket-io-chat.glitch.me/\"")
     }
 
     buildTypes {
         debug {
             buildConfigField("String", "BASE_API_URL", "\"https://dev.api.example.com/\"")
-            buildConfigField("String", "BASE_SOCKET_URL", "\"https://dev.socket.example.com/\"")
+            buildConfigField("String", "BASE_SOCKET_URL", "\"https://socket-io-chat.glitch.me/\"")
         }
         release {
             buildConfigField("String", "BASE_API_URL", "\"https://prod.api.example.com/\"")
-            buildConfigField("String", "BASE_SOCKET_URL", "\"https://prod.socket.example.com/\"")
+            buildConfigField("String", "BASE_SOCKET_URL", "\"https://socket-io-chat.glitch.me/\"")
             isMinifyEnabled = true
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
@@ -55,6 +55,7 @@ android {
 
 dependencies {
     implementation(project(":core:realtime"))
+    implementation(project(":core:designsystem"))
 
     // Compose
     implementation(platform(libs.androidx.compose.bom))
@@ -63,6 +64,7 @@ dependencies {
     implementation(libs.androidx.activity.compose)
     implementation(libs.androidx.navigation.compose)
     implementation(libs.androidx.hilt.navigation.compose)
+    implementation(libs.androidx.core.ktx)
 
     // Coroutines
     implementation(libs.kotlinx.coroutines.core)
