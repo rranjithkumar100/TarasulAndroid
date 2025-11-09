@@ -106,13 +106,13 @@ fun ContactListScreen(
                     )
                     kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Main) {
                         isCreatingConversation = false
-                        // Navigate to chat screen with conversation details
+                        // Navigate to chat screen and pop contacts from back stack
                         navController.navigate("chat/${conversation.contactId}/${conversation.contactName}/false") {
-                            // Don't add to back stack if coming from contacts
-                            launchSingleTop = true
+                            popUpTo("contacts") { inclusive = true }
                         }
                     }
                 } catch (e: Exception) {
+                    e.printStackTrace()
                     kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Main) {
                         isCreatingConversation = false
                     }

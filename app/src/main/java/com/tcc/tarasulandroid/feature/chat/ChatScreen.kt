@@ -44,9 +44,24 @@ fun ChatScreen(
         ).messagesRepository()
     }
     
-    // Load messages from database
-    val conversationId = remember { contact.id }
-    val messagesFromDb by messagesRepository.getMessagesForConversation(conversationId)
+    // Get or create conversation first to ensure it exists
+    var conversationId by remember { mutableStateOf<String?>(null) }
+    
+    LaunchedEffect(contact.id) {
+        try {
+            val conversation = messagesRepository.getOrCreateConversation(
+                contactId = contact.id,
+                contactName = contact.name,
+                contactPhoneNumber = "" // Phone number might not be available from navigation
+            )
+            conversationId = conversation.id
+        } catch (e: Exception) {
+            e.printStackTrace()
+        }
+    }
+    
+    // Load messages from database using the conversation ID
+    val messagesFromDb by messagesRepository.getMessagesForConversation(conversationId ?: "")
         .collectAsState(initial = emptyList())
     
     // Convert DB messages to UI messages
@@ -205,12 +220,12 @@ fun ChatScreen(
                     Spacer(modifier = Modifier.width(8.dp))
                     FloatingActionButton(
                         onClick = {
-                            if (messageText.isNotBlank()) {
+                            if (messageText.isNotBlank() && conversationId != null) {
                                 // Send message via repository
                                 kotlinx.coroutines.GlobalScope.launch {
                                     try {
                                         messagesRepository.sendMessage(
-                                            conversationId = conversationId,
+                                            conversationId = conversationId!!,
                                             content = messageText,
                                             recipientId = contact.id
                                         )
