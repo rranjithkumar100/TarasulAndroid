@@ -4,7 +4,6 @@ import android.app.Activity
 import android.content.Context
 import android.content.res.Configuration
 import android.os.Build
-import androidx.core.os.LocaleListCompat
 import dagger.hilt.android.qualifiers.ApplicationContext
 import java.util.*
 import javax.inject.Inject
@@ -15,17 +14,25 @@ class LanguageManager @Inject constructor(
     @ApplicationContext private val context: Context,
     private val securePrefsManager: SecurePreferencesManager
 ) {
+    // Also use regular SharedPreferences for language to avoid encryption issues on app start
+    private val languagePrefs = context.getSharedPreferences("app_language_prefs", Context.MODE_PRIVATE)
+    
     companion object {
         const val LANGUAGE_ENGLISH = "en"
         const val LANGUAGE_ARABIC = "ar"
+        private const val KEY_LANGUAGE = "language"
     }
 
     fun getCurrentLanguage(): String {
-        return securePrefsManager.getLanguage()
+        // Read from regular prefs first (used in attachBaseContext)
+        return languagePrefs.getString(KEY_LANGUAGE, LANGUAGE_ENGLISH) ?: LANGUAGE_ENGLISH
     }
 
     fun setLanguage(language: String, activity: Activity? = null) {
+        // Save to both secure and regular prefs
         securePrefsManager.setLanguage(language)
+        languagePrefs.edit().putString(KEY_LANGUAGE, language).apply()
+        
         applyLanguage(language)
         activity?.recreate()
     }
