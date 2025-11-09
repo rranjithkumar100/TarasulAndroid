@@ -196,17 +196,20 @@ fun ChatScreen(
             )
         },
         bottomBar = {
-            Surface(
-                shadowElevation = 8.dp,
-                color = MaterialTheme.colorScheme.surface,
-                modifier = Modifier.navigationBarsPadding() // Add navigation bar padding
-            ) {
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(8.dp),
-                    verticalAlignment = Alignment.CenterVertically
+            Column {
+                HorizontalDivider()
+                Surface(
+                    shadowElevation = 8.dp,
+                    color = MaterialTheme.colorScheme.surface
                 ) {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(8.dp)
+                            .navigationBarsPadding() // Add navigation bar padding directly to Row
+                            .imePadding(), // Add keyboard padding to prevent gap
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
                     TextField(
                         value = messageText,
                         onValueChange = { messageText = it },
@@ -257,6 +260,7 @@ fun ChatScreen(
                         )
                     }
                 }
+            }
             }
         }
     ) { padding ->
