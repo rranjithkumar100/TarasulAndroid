@@ -1,9 +1,9 @@
 package com.tcc.tarasulandroid.feature.home.ui
 
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.ChatBubble
+import androidx.compose.material.icons.filled.Chat
 import androidx.compose.material.icons.filled.Person
-import androidx.compose.material.icons.outlined.ChatBubbleOutline
+import androidx.compose.material.icons.outlined.Chat
 import androidx.compose.material.icons.outlined.Person
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -19,7 +19,7 @@ fun HomeScreen(
     var selectedTab by remember { mutableStateOf(0) }
     
     val tabs = listOf(
-        BottomNavItem("Chats", Icons.Outlined.ChatBubbleOutline, Icons.Filled.ChatBubble),
+        BottomNavItem("Chats", Icons.Outlined.Chat, Icons.Filled.Chat),
         BottomNavItem("Profile", Icons.Outlined.Person, Icons.Filled.Person)
     )
 

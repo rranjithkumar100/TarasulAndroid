@@ -8,8 +8,6 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Email
 import androidx.compose.material.icons.filled.Lock
-import androidx.compose.material.icons.filled.Visibility
-import androidx.compose.material.icons.filled.VisibilityOff
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -122,15 +120,9 @@ fun LoginScreen(
                 },
                 trailingIcon = {
                     IconButton(onClick = { passwordVisible = !passwordVisible }) {
-                        Icon(
-                            imageVector = if (passwordVisible) 
-                                Icons.Default.Visibility 
-                            else 
-                                Icons.Default.VisibilityOff,
-                            contentDescription = if (passwordVisible) 
-                                "Hide password" 
-                            else 
-                                "Show password"
+                        Text(
+                            text = if (passwordVisible) "👁️" else "👁️‍🗨️",
+                            style = MaterialTheme.typography.titleLarge
                         )
                     }
                 },

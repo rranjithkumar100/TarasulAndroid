@@ -6,7 +6,12 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.*
+import androidx.compose.material.icons.filled.Person
+import androidx.compose.material.icons.filled.Lock
+import androidx.compose.material.icons.filled.Notifications
+import androidx.compose.material.icons.filled.Info
+import androidx.compose.material.icons.filled.KeyboardArrowRight
+import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
@@ -105,7 +110,7 @@ fun ProfileScreen(
                 )
 
                 ProfileSettingItem(
-                    icon = Icons.Default.DarkMode,
+                    icon = Icons.Default.Settings,
                     title = "Dark Theme",
                     subtitle = "Switch between light and dark mode",
                     trailing = {
@@ -158,7 +163,7 @@ fun ProfileScreen(
                 )
 
                 ProfileSettingItem(
-                    icon = Icons.Default.Help,
+                    icon = Icons.Default.Info,
                     title = "Help & Support",
                     subtitle = "Get help and contact us",
                     onClick = { /* TODO */ }
@@ -183,9 +188,7 @@ fun ProfileScreen(
                         contentColor = MaterialTheme.colorScheme.onErrorContainer
                     )
                 ) {
-                    Icon(Icons.Default.Logout, contentDescription = null)
-                    Spacer(modifier = Modifier.width(8.dp))
-                    Text("Logout")
+                    Text("Logout", fontWeight = FontWeight.Bold)
                 }
             }
         }
@@ -236,7 +239,7 @@ private fun ProfileSettingItem(
                 trailing()
             } else if (onClick != null) {
                 Icon(
-                    imageVector = Icons.Default.ChevronRight,
+                    imageVector = Icons.Default.KeyboardArrowRight,
                     contentDescription = null,
                     tint = MaterialTheme.colorScheme.onSurfaceVariant
                 )
