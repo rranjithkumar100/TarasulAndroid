@@ -31,4 +31,10 @@ object DatabaseModule {
     fun provideMessagesDao(database: AppDatabase): com.tcc.tarasulandroid.data.db.MessagesDao {
         return database.messagesDao()
     }
+    
+    @Provides
+    @Singleton
+    fun provideMediaDao(database: AppDatabase): com.tcc.tarasulandroid.data.db.MediaDao {
+        return database.mediaDao()
+    }
 }

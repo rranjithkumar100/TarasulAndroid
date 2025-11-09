@@ -11,6 +11,10 @@ interface MessagesDao {
     @Query("SELECT * FROM messages WHERE conversationId = :conversationId ORDER BY timestamp ASC")
     fun getMessagesForConversation(conversationId: String): Flow<List<MessageEntity>>
     
+    @androidx.room.Transaction
+    @Query("SELECT * FROM messages WHERE conversationId = :conversationId ORDER BY timestamp ASC")
+    fun getMessagesWithMediaForConversation(conversationId: String): Flow<List<com.tcc.tarasulandroid.data.MessageWithMedia>>
+    
     @Query("SELECT * FROM messages WHERE conversationId = :conversationId ORDER BY timestamp ASC")
     suspend fun getMessagesForConversationSync(conversationId: String): List<MessageEntity>
     

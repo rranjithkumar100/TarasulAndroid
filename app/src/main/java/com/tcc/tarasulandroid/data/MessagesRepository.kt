@@ -1,8 +1,7 @@
 package com.tcc.tarasulandroid.data
 
-import com.tcc.tarasulandroid.data.db.ConversationEntity
-import com.tcc.tarasulandroid.data.db.MessageEntity
-import com.tcc.tarasulandroid.data.db.MessagesDao
+import android.net.Uri
+import com.tcc.tarasulandroid.data.db.*
 import com.tcc.tarasulandroid.data.encryption.MessageEncryption
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
@@ -16,7 +15,8 @@ import javax.inject.Singleton
 @Singleton
 class MessagesRepository @Inject constructor(
     private val messagesDao: MessagesDao,
-    private val securePreferencesManager: SecurePreferencesManager
+    private val securePreferencesManager: SecurePreferencesManager,
+    private val mediaRepository: MediaRepository
 ) {
     
     // In-memory cache for encryption keys (per conversation)
@@ -61,6 +61,32 @@ class MessagesRepository @Inject constructor(
                     }
                 } else {
                     message
+                }
+            }
+        }
+    }
+    
+    /**
+     * Get messages with media for a conversation
+     */
+    fun getMessagesWithMediaForConversation(conversationId: String): Flow<List<MessageWithMedia>> {
+        return messagesDao.getMessagesWithMediaForConversation(conversationId).map { messagesWithMedia ->
+            messagesWithMedia.map { messageWithMedia ->
+                val message = messageWithMedia.message
+                if (message.isEncrypted && message.content.isNotEmpty()) {
+                    try {
+                        val key = getEncryptionKey(conversationId)
+                        val decryptedContent = MessageEncryption.decrypt(message.content, key)
+                        messageWithMedia.copy(
+                            message = message.copy(content = decryptedContent)
+                        )
+                    } catch (e: Exception) {
+                        messageWithMedia.copy(
+                            message = message.copy(content = "🔒 Decryption failed")
+                        )
+                    }
+                } else {
+                    messageWithMedia
                 }
             }
         }
@@ -190,6 +216,93 @@ class MessagesRepository @Inject constructor(
         messagesDao.deleteAllMessagesInConversation(conversationId)
         messagesDao.deleteConversationById(conversationId)
         encryptionKeys.remove(conversationId)
+    }
+    
+    /**
+     * Send a media message (image/video/file/contact)
+     */
+    suspend fun sendMediaMessage(
+        conversationId: String,
+        recipientId: String,
+        mediaType: MessageType,
+        mediaUri: Uri,
+        caption: String = "",
+        mimeType: String? = null,
+        fileName: String? = null
+    ) = withContext(Dispatchers.IO) {
+        android.util.Log.d("MessagesRepository", "sendMediaMessage - type: $mediaType, uri: $mediaUri")
+        
+        val currentUserId = securePreferencesManager.getUserEmail() ?: "me"
+        
+        // Check if encryption is enabled for this conversation
+        val conversation = messagesDao.getConversationById(conversationId)
+        val isEncrypted = conversation?.isEncryptionEnabled ?: false
+        
+        // Encrypt caption if needed
+        val messageContent = if (isEncrypted && caption.isNotEmpty()) {
+            val key = getEncryptionKey(conversationId)
+            MessageEncryption.encrypt(caption, key)
+        } else {
+            caption
+        }
+        
+        // Create message ID
+        val messageId = UUID.randomUUID().toString()
+        
+        // Save media to internal storage
+        val media = mediaRepository.saveOutgoingMedia(
+            uri = mediaUri,
+            messageId = messageId,
+            mimeType = mimeType,
+            fileName = fileName
+        )
+        
+        // Create message entity
+        val message = MessageEntity(
+            id = messageId,
+            conversationId = conversationId,
+            senderId = currentUserId,
+            recipientId = recipientId,
+            type = mediaType,
+            content = messageContent,
+            mediaId = media.mediaId,
+            isEncrypted = isEncrypted,
+            timestamp = System.currentTimeMillis(),
+            status = MessageStatus.SENT,
+            direction = MessageDirection.OUTGOING,
+            isSent = true,
+            isDelivered = false,
+            isRead = false,
+            isMine = true
+        )
+        
+        android.util.Log.d("MessagesRepository", "Inserting media message: ${message.id}")
+        messagesDao.insertMessage(message)
+        
+        // Update conversation with last message
+        val lastMessageText = when (mediaType) {
+            MessageType.IMAGE -> "📷 Image"
+            MessageType.VIDEO -> "🎥 Video"
+            MessageType.FILE -> "📎 File"
+            MessageType.CONTACT -> "👤 Contact"
+            MessageType.AUDIO -> "🎵 Audio"
+            else -> caption
+        }
+        
+        messagesDao.updateConversationLastMessage(
+            conversationId = conversationId,
+            lastMessage = lastMessageText,
+            lastMessageTime = message.timestamp
+        )
+        
+        android.util.Log.d("MessagesRepository", "Media message sent successfully")
+    }
+    
+    /**
+     * Download media for a message
+     */
+    suspend fun downloadMedia(mediaId: String): Result<String> {
+        return mediaRepository.downloadMedia(mediaId)
     }
     
     /**
