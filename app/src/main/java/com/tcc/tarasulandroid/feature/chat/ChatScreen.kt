@@ -19,6 +19,10 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.ime
+import androidx.compose.foundation.layout.safeDrawing
+import androidx.compose.foundation.layout.windowInsetsPadding
 import com.tcc.tarasulandroid.R
 import com.tcc.tarasulandroid.feature.home.model.Contact
 import com.tcc.tarasulandroid.feature.home.model.Message
@@ -34,8 +38,9 @@ fun ChatScreen(
 ) {
     val context = LocalContext.current
     var messageText by remember { mutableStateOf("") }
-    
-    // Get MessagesRepository
+    val coroutineScope = rememberCoroutineScope()
+
+    // DI
     val messagesRepository = remember {
         val app = context.applicationContext as com.tcc.tarasulandroid.TarasulApplication
         dagger.hilt.android.EntryPointAccessors.fromApplication(
@@ -43,31 +48,24 @@ fun ChatScreen(
             com.tcc.tarasulandroid.di.MessagesRepositoryEntryPoint::class.java
         ).messagesRepository()
     }
-    
-    // Get or create conversation first to ensure it exists
+
     var conversationId by remember { mutableStateOf<String?>(null) }
-    
+
     LaunchedEffect(contact.id) {
         try {
-            android.util.Log.d("ChatScreen", "Getting conversation for contact: ${contact.id}, ${contact.name}")
             val conversation = messagesRepository.getOrCreateConversation(
                 contactId = contact.id,
                 contactName = contact.name,
-                contactPhoneNumber = "" // Phone number might not be available from navigation
+                contactPhoneNumber = ""
             )
             conversationId = conversation.id
-            android.util.Log.d("ChatScreen", "Conversation ID set to: $conversationId")
-        } catch (e: Exception) {
-            android.util.Log.e("ChatScreen", "Error getting conversation", e)
-            e.printStackTrace()
-        }
+        } catch (_: Exception) {}
     }
-    
-    // Load messages from database using the conversation ID
-    val messagesFromDb by messagesRepository.getMessagesForConversation(conversationId ?: "")
+
+    val messagesFromDb by messagesRepository
+        .getMessagesForConversation(conversationId ?: "")
         .collectAsState(initial = emptyList())
-    
-    // Convert DB messages to UI messages
+
     val messages = remember(messagesFromDb) {
         messagesFromDb.map { msg ->
             Message(
@@ -77,56 +75,11 @@ fun ChatScreen(
                 text = msg.content,
                 time = msg.timestamp
             )
-        }.toMutableStateList()
-    }
-    
-    // Dummy messages for initial demo (only if DB is empty)
-    LaunchedEffect(messagesFromDb.isEmpty()) {
-        if (messagesFromDb.isEmpty()) {
-            // Add some dummy messages only on first load
-            val dummyMessages = listOf(
-            Message(
-                id = "1",
-                from = contact.name,
-                to = "Me",
-                text = "Hey! How are you doing?",
-                time = System.currentTimeMillis() - 3600000
-            ),
-            Message(
-                id = "2",
-                from = "Me",
-                to = contact.name,
-                text = "Hi! I'm doing great, thanks for asking!",
-                time = System.currentTimeMillis() - 3000000
-            ),
-            Message(
-                id = "3",
-                from = contact.name,
-                to = "Me",
-                text = "That's awesome! Want to catch up later?",
-                time = System.currentTimeMillis() - 2400000
-            ),
-            Message(
-                id = "4",
-                from = "Me",
-                to = contact.name,
-                text = "Sure! What time works for you?",
-                time = System.currentTimeMillis() - 1800000
-            ),
-            Message(
-                id = "5",
-                from = contact.name,
-                to = "Me",
-                text = "How about 5 PM?",
-                time = System.currentTimeMillis() - 600000
-            ))
-            // Don't add dummy messages to state, just for demo
         }
     }
 
     val listState = rememberLazyListState()
-    
-    // Auto-scroll to bottom when new message is added or keyboard appears
+
     LaunchedEffect(messages.size) {
         if (messages.isNotEmpty()) {
             listState.animateScrollToItem(messages.size - 1)
@@ -135,6 +88,7 @@ fun ChatScreen(
 
     Scaffold(
         modifier = Modifier.fillMaxSize(),
+        // Use default insets for top (safe choice). We’ll handle bottom/IME in bottomBar only.
         topBar = {
             TopAppBar(
                 title = {
@@ -172,9 +126,9 @@ fun ChatScreen(
                                 fontWeight = FontWeight.SemiBold
                             )
                             Text(
-                                text = if (contact.isOnline) 
-                                    stringResource(R.string.online) 
-                                else 
+                                text = if (contact.isOnline)
+                                    stringResource(R.string.online)
+                                else
                                     stringResource(R.string.offline),
                                 style = MaterialTheme.typography.bodySmall,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
@@ -196,15 +150,20 @@ fun ChatScreen(
             )
         },
         bottomBar = {
+            // ⬇️ This is the key: imePadding() for keyboard, safeDrawing bottom for gestures when keyboard hidden
             Surface(
                 shadowElevation = 8.dp,
-                color = MaterialTheme.colorScheme.surface
+                color = MaterialTheme.colorScheme.surface,
+                modifier = Modifier
+                    .imePadding()
+                    .windowInsetsPadding(
+                        WindowInsets.safeDrawing.only(WindowInsetsSides.Bottom)
+                    )
             ) {
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(8.dp)
-                        .navigationBarsPadding(), // Only navigation bar padding
+                        .padding(horizontal = 8.dp, vertical = 8.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     TextField(
@@ -218,33 +177,24 @@ fun ChatScreen(
                             focusedContainerColor = MaterialTheme.colorScheme.surfaceVariant,
                             unfocusedContainerColor = MaterialTheme.colorScheme.surfaceVariant
                         ),
-                        shape = RoundedCornerShape(24.dp)
+                        shape = RoundedCornerShape(24.dp),
+                        maxLines = 4
                     )
                     Spacer(modifier = Modifier.width(8.dp))
                     FloatingActionButton(
                         onClick = {
-                            android.util.Log.d("ChatScreen", "Send button clicked - messageText: $messageText, conversationId: $conversationId")
                             if (messageText.isNotBlank() && conversationId != null) {
-                                val textToSend = messageText
-                                messageText = "" // Clear immediately for better UX
-                                
-                                // Send message via repository
-                                kotlinx.coroutines.GlobalScope.launch {
+                                val textToSend = messageText.trim()
+                                messageText = ""
+                                coroutineScope.launch {
                                     try {
-                                        android.util.Log.d("ChatScreen", "Sending message to repository...")
                                         messagesRepository.sendMessage(
                                             conversationId = conversationId!!,
                                             content = textToSend,
                                             recipientId = contact.id
                                         )
-                                        android.util.Log.d("ChatScreen", "Message sent successfully")
-                                    } catch (e: Exception) {
-                                        android.util.Log.e("ChatScreen", "Error sending message", e)
-                                        e.printStackTrace()
-                                    }
+                                    } catch (_: Exception) { }
                                 }
-                            } else {
-                                android.util.Log.d("ChatScreen", "Cannot send - messageText blank or conversationId null")
                             }
                         },
                         modifier = Modifier.size(48.dp),
@@ -260,21 +210,22 @@ fun ChatScreen(
             }
         }
     ) { padding ->
-        Box(
+        // Content area — no IME/nav paddings here
+        Column(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(padding)
-                .imePadding() // Keyboard padding for content area
         ) {
             LazyColumn(
                 modifier = Modifier
-                    .fillMaxSize()
+                    .weight(1f)
+                    .fillMaxWidth()
                     .padding(horizontal = 16.dp),
                 state = listState,
                 reverseLayout = false,
-                contentPadding = PaddingValues(bottom = 8.dp)
+                contentPadding = PaddingValues(vertical = 8.dp)
             ) {
-                items(messages) { message ->
+                items(items = messages, key = { it.id }) { message ->
                     MessageBubble(message = message)
                     Spacer(modifier = Modifier.height(8.dp))
                 }
@@ -284,9 +235,9 @@ fun ChatScreen(
 }
 
 @Composable
-private fun MessageBubble(message: Message) {
+fun MessageBubble(message: Message) {
     val isMe = message.from == "Me"
-    
+
     Column(
         modifier = Modifier.fillMaxWidth(),
         horizontalAlignment = if (isMe) Alignment.End else Alignment.Start
@@ -298,9 +249,9 @@ private fun MessageBubble(message: Message) {
                 bottomStart = if (isMe) 16.dp else 4.dp,
                 bottomEnd = if (isMe) 4.dp else 16.dp
             ),
-            color = if (isMe) 
-                MaterialTheme.colorScheme.primaryContainer 
-            else 
+            color = if (isMe)
+                MaterialTheme.colorScheme.primaryContainer
+            else
                 MaterialTheme.colorScheme.surfaceVariant,
             modifier = Modifier.widthIn(max = 280.dp)
         ) {
@@ -308,9 +259,9 @@ private fun MessageBubble(message: Message) {
                 text = message.text,
                 modifier = Modifier.padding(12.dp),
                 style = MaterialTheme.typography.bodyMedium,
-                color = if (isMe) 
-                    MaterialTheme.colorScheme.onPrimaryContainer 
-                else 
+                color = if (isMe)
+                    MaterialTheme.colorScheme.onPrimaryContainer
+                else
                     MaterialTheme.colorScheme.onSurfaceVariant
             )
         }
