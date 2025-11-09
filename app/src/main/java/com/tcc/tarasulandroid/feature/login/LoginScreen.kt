@@ -28,15 +28,26 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavController
 import com.tcc.tarasulandroid.R
 import com.tcc.tarasulandroid.data.LanguageManager
+import com.tcc.tarasulandroid.di.LanguageManagerEntryPoint
 import com.tcc.tarasulandroid.feature.login.viewmodels.LoginViewModel
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun LoginScreen(
     navController: NavController,
-    viewModel: LoginViewModel = hiltViewModel(),
-    languageManager: LanguageManager = hiltViewModel()
+    viewModel: LoginViewModel = hiltViewModel()
 ) {
+    val context = LocalContext.current
+    // Get LanguageManager from the application context, not as ViewModel
+    val languageManager = remember {
+        (context.applicationContext as com.tcc.tarasulandroid.TarasulApplication).let { app ->
+            // Get from Hilt's entry point
+            dagger.hilt.android.EntryPointAccessors.fromApplication(
+                app,
+                LanguageManagerEntryPoint::class.java
+            ).languageManager()
+        }
+    }
     var email by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
     var passwordVisible by remember { mutableStateOf(false) }

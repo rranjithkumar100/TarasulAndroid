@@ -31,14 +31,25 @@ import com.tcc.tarasulandroid.viewmodels.MainViewModel
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ProfileScreen(
-    viewModel: MainViewModel = hiltViewModel(),
-    languageManager: LanguageManager = hiltViewModel()
+    viewModel: MainViewModel = hiltViewModel()
 ) {
+    val context = LocalContext.current
+    val activity = context as? Activity
+    
+    // Get LanguageManager from the application context, not as ViewModel
+    val languageManager = remember {
+        (context.applicationContext as com.tcc.tarasulandroid.TarasulApplication).let { app ->
+            // Get from Hilt's entry point
+            dagger.hilt.android.EntryPointAccessors.fromApplication(
+                app,
+                com.tcc.tarasulandroid.di.LanguageManagerEntryPoint::class.java
+            ).languageManager()
+        }
+    }
+    
     val isDarkTheme by viewModel.isDarkTheme.collectAsState()
     val scrollState = rememberScrollState()
     var showLanguageDialog by remember { mutableStateOf(false) }
-    val context = LocalContext.current
-    val activity = context as? Activity
 
     Scaffold(
         topBar = {
