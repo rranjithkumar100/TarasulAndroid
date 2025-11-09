@@ -58,12 +58,19 @@ fun ContactListScreen(
     // State for creating conversation
     var isCreatingConversation by remember { mutableStateOf(false) }
     
+    // Check if we already have contacts cached
+    val hasContacts = uiState.contacts.isNotEmpty()
+    
     // Permission launcher
     val permissionLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.RequestPermission()
     ) { isGranted ->
         if (isGranted) {
             viewModel.onPermissionGranted()
+            // Auto-sync contacts after permission is granted (only if we don't have cached contacts)
+            if (!hasContacts) {
+                viewModel.syncContacts(forceFullSync = false)
+            }
         } else {
             viewModel.onPermissionDenied()
         }
