@@ -96,22 +96,28 @@ fun ChatScreen(
     val imagePickerLauncher = rememberLauncherForActivityResult(
         contract = PickImageContract()
     ) { uri ->
-        uri?.let { 
-            coroutineScope.launch {
-                try {
-                    android.util.Log.d("ChatScreen", "Sending image: $it")
-                    messagesRepository.sendMediaMessage(
-                        conversationId = conversationId ?: return@launch,
-                        recipientId = contact.id,
-                        mediaType = MessageType.IMAGE,
-                        mediaUri = it,
-                        mimeType = context.contentResolver.getType(it),
-                        fileName = MediaPickerHelper.getFileName(context, it)
-                    )
-                    android.util.Log.d("ChatScreen", "Image sent successfully")
-                } catch (e: Exception) {
-                    android.util.Log.e("ChatScreen", "Error sending image", e)
-                }
+        android.util.Log.d("ChatScreen", "Image picker callback - URI: $uri")
+        if (uri == null) {
+            android.util.Log.w("ChatScreen", "Image picker returned null URI (cancelled or error)")
+            return@rememberLauncherForActivityResult
+        }
+        
+        coroutineScope.launch {
+            try {
+                android.util.Log.d("ChatScreen", "Sending image: $uri")
+                android.util.Log.d("ChatScreen", "ConversationId: $conversationId, ContactId: ${contact.id}")
+                
+                messagesRepository.sendMediaMessage(
+                    conversationId = conversationId ?: return@launch,
+                    recipientId = contact.id,
+                    mediaType = MessageType.IMAGE,
+                    mediaUri = uri,
+                    mimeType = context.contentResolver.getType(uri),
+                    fileName = MediaPickerHelper.getFileName(context, uri)
+                )
+                android.util.Log.d("ChatScreen", "Image sent successfully")
+            } catch (e: Exception) {
+                android.util.Log.e("ChatScreen", "Error sending image", e)
             }
         }
     }
@@ -119,22 +125,28 @@ fun ChatScreen(
     val videoPickerLauncher = rememberLauncherForActivityResult(
         contract = PickVideoContract()
     ) { uri ->
-        uri?.let { 
-            coroutineScope.launch {
-                try {
-                    android.util.Log.d("ChatScreen", "Sending video: $it")
-                    messagesRepository.sendMediaMessage(
-                        conversationId = conversationId ?: return@launch,
-                        recipientId = contact.id,
-                        mediaType = MessageType.VIDEO,
-                        mediaUri = it,
-                        mimeType = context.contentResolver.getType(it),
-                        fileName = MediaPickerHelper.getFileName(context, it)
-                    )
-                    android.util.Log.d("ChatScreen", "Video sent successfully")
-                } catch (e: Exception) {
-                    android.util.Log.e("ChatScreen", "Error sending video", e)
-                }
+        android.util.Log.d("ChatScreen", "Video picker callback - URI: $uri")
+        if (uri == null) {
+            android.util.Log.w("ChatScreen", "Video picker returned null URI (cancelled or error)")
+            return@rememberLauncherForActivityResult
+        }
+        
+        coroutineScope.launch {
+            try {
+                android.util.Log.d("ChatScreen", "Sending video: $uri")
+                android.util.Log.d("ChatScreen", "ConversationId: $conversationId, ContactId: ${contact.id}")
+                
+                messagesRepository.sendMediaMessage(
+                    conversationId = conversationId ?: return@launch,
+                    recipientId = contact.id,
+                    mediaType = MessageType.VIDEO,
+                    mediaUri = uri,
+                    mimeType = context.contentResolver.getType(uri),
+                    fileName = MediaPickerHelper.getFileName(context, uri)
+                )
+                android.util.Log.d("ChatScreen", "Video sent successfully")
+            } catch (e: Exception) {
+                android.util.Log.e("ChatScreen", "Error sending video", e)
             }
         }
     }
@@ -427,16 +439,26 @@ fun ChatScreen(
                 }
             },
             onGalleryClick = {
+                android.util.Log.d("ChatScreen", "Gallery clicked")
+                android.util.Log.d("ChatScreen", "Media permissions granted: ${mediaPermissionsState.allPermissionsGranted}")
+                
                 if (mediaPermissionsState.allPermissionsGranted) {
+                    android.util.Log.d("ChatScreen", "Launching image picker")
                     imagePickerLauncher.launch(Unit)
                 } else {
+                    android.util.Log.d("ChatScreen", "Requesting media permissions")
                     mediaPermissionsState.requestPermissions()
                 }
             },
             onVideoClick = {
+                android.util.Log.d("ChatScreen", "Video clicked")
+                android.util.Log.d("ChatScreen", "Media permissions granted: ${mediaPermissionsState.allPermissionsGranted}")
+                
                 if (mediaPermissionsState.allPermissionsGranted) {
+                    android.util.Log.d("ChatScreen", "Launching video picker")
                     videoPickerLauncher.launch(Unit)
                 } else {
+                    android.util.Log.d("ChatScreen", "Requesting media permissions")
                     mediaPermissionsState.requestPermissions()
                 }
             },
