@@ -18,6 +18,7 @@ android {
         targetSdk = 36
         versionCode = 1
         versionName = "1.0"
+        multiDexEnabled = true
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         
@@ -27,6 +28,7 @@ android {
 
     buildTypes {
         debug {
+            isMinifyEnabled = false
             buildConfigField("String", "BASE_API_URL", "\"https://dev.api.example.com/\"")
             buildConfigField("String", "BASE_SOCKET_URL", "\"https://socket-io-chat.glitch.me/\"")
         }
@@ -77,6 +79,7 @@ dependencies {
     implementation(libs.okhttp.logging)
     implementation(libs.moshi)
     implementation(libs.moshi.kotlin)
+    ksp(libs.moshi.codegen)
 
     // Hilt
     implementation(libs.hilt.android)
@@ -97,4 +100,5 @@ dependencies {
     androidTestImplementation(libs.androidx.compose.ui.test.junit4)
     debugImplementation(libs.androidx.compose.ui.tooling)
     debugImplementation(libs.androidx.compose.ui.test.manifest)
+    implementation("androidx.multidex:multidex:2.0.1")
 }

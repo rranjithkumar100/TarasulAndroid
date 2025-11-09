@@ -1,7 +1,8 @@
 package com.tcc.tarasulandroid
 
 import android.app.Application
+import androidx.multidex.MultiDexApplication
 import dagger.hilt.android.HiltAndroidApp
 
 @HiltAndroidApp
-class TarasulApplication : Application()
+class TarasulApplication : MultiDexApplication()
