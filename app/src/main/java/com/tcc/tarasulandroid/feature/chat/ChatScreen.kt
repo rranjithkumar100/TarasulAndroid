@@ -231,10 +231,10 @@ fun ChatScreen(
                         photoUri = uri.toString()
                     )
                     
-                    // Send as contact message
-                    messagesRepository.sendMessage(
+                    // Send as contact message with proper type
+                    messagesRepository.sendContactMessage(
                         conversationId = conversationId ?: return@launch,
-                        content = contactInfo.toJsonString(),
+                        contactInfo = contactInfo,
                         recipientId = contact.id
                     )
                 } catch (e: Exception) {

@@ -40,6 +40,8 @@
     <!-- Chat Screen -->
     <string name="type_message">اكتب رسالة...</string>
     <string name="send">إرسال</string>
+    <string name="reply">رد</string>
+    <string name="replying_to">الرد على %s</string>
     
     <!-- Profile Screen -->
     <string name="appearance">المظهر</string>

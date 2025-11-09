@@ -12,7 +12,7 @@ import androidx.room.RoomDatabase
         ConversationEntity::class,
         MediaEntity::class
     ],
-    version = 3,
+    version = 4,
     exportSchema = false
 )
 @androidx.room.TypeConverters(Converters::class)
@@ -81,6 +81,16 @@ abstract class AppDatabase : RoomDatabase() {
             }
         }
         
+        private val MIGRATION_3_4 = object : androidx.room.migration.Migration(3, 4) {
+            override fun migrate(database: androidx.sqlite.db.SupportSQLiteDatabase) {
+                // Add replyToMessageId column to messages table
+                database.execSQL("ALTER TABLE `messages` ADD COLUMN `replyToMessageId` TEXT")
+                
+                // Create index for replies
+                database.execSQL("CREATE INDEX IF NOT EXISTS `index_messages_replyToMessageId` ON `messages` (`replyToMessageId`)")
+            }
+        }
+        
         fun getDatabase(context: Context): AppDatabase {
             return INSTANCE ?: synchronized(this) {
                 val instance = Room.databaseBuilder(
@@ -88,7 +98,7 @@ abstract class AppDatabase : RoomDatabase() {
                     AppDatabase::class.java,
                     "tarasul_database"
                 )
-                    .addMigrations(MIGRATION_2_3)
+                    .addMigrations(MIGRATION_2_3, MIGRATION_3_4)
                     .fallbackToDestructiveMigration()
                     .build()
                 INSTANCE = instance

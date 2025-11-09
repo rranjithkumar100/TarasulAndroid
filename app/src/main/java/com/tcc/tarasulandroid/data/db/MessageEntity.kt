@@ -9,7 +9,8 @@ import androidx.room.PrimaryKey
     indices = [
         Index(value = ["conversationId", "timestamp"]),
         Index(value = ["status"]),
-        Index(value = ["mediaId"])
+        Index(value = ["mediaId"]),
+        Index(value = ["replyToMessageId"])
     ]
 )
 data class MessageEntity(
@@ -24,6 +25,9 @@ data class MessageEntity(
     val type: MessageType = MessageType.TEXT,
     val content: String, // Text content or caption (encrypted if E2E enabled)
     val mediaId: String? = null, // Reference to MediaEntity for non-text messages
+    
+    // Reply support
+    val replyToMessageId: String? = null, // ID of message being replied to
     
     // Encryption
     val isEncrypted: Boolean = false, // Whether content is encrypted

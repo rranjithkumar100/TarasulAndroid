@@ -93,12 +93,46 @@ class MessagesRepository @Inject constructor(
     }
     
     /**
+     * Get messages with reply information for a conversation
+     */
+    fun getMessagesWithReplyForConversation(conversationId: String): Flow<List<MessageWithReply>> {
+        return messagesDao.getMessagesWithReplyForConversation(conversationId).map { messagesWithReply ->
+            messagesWithReply.map { messageWithReply ->
+                val message = messageWithReply.message
+                if (message.isEncrypted && message.content.isNotEmpty()) {
+                    try {
+                        val key = getEncryptionKey(conversationId)
+                        val decryptedContent = MessageEncryption.decrypt(message.content, key)
+                        messageWithReply.copy(
+                            message = message.copy(content = decryptedContent)
+                        )
+                    } catch (e: Exception) {
+                        messageWithReply.copy(
+                            message = message.copy(content = "🔒 Decryption failed")
+                        )
+                    }
+                } else {
+                    messageWithReply
+                }
+            }
+        }
+    }
+    
+    /**
+     * Get a single message by ID
+     */
+    suspend fun getMessageById(messageId: String): MessageEntity? {
+        return messagesDao.getMessageById(messageId)
+    }
+    
+    /**
      * Send a new message (with optional encryption)
      */
     suspend fun sendMessage(
         conversationId: String,
         content: String,
-        recipientId: String
+        recipientId: String,
+        replyToMessageId: String? = null
     ) = withContext(Dispatchers.IO) {
         android.util.Log.d("MessagesRepository", "sendMessage called - conversationId: $conversationId, content: $content, recipientId: $recipientId")
         
@@ -230,7 +264,8 @@ class MessagesRepository @Inject constructor(
         mediaUri: Uri,
         caption: String = "",
         mimeType: String? = null,
-        fileName: String? = null
+        fileName: String? = null,
+        replyToMessageId: String? = null
     ) = withContext(Dispatchers.IO) {
         android.util.Log.d("MessagesRepository", "sendMediaMessage - type: $mediaType, uri: $mediaUri")
         
@@ -272,6 +307,7 @@ class MessagesRepository @Inject constructor(
             timestamp = System.currentTimeMillis(),
             status = MessageStatus.SENT,
             direction = MessageDirection.OUTGOING,
+            replyToMessageId = replyToMessageId,
             isSent = true,
             isDelivered = false,
             isRead = false,
@@ -305,6 +341,59 @@ class MessagesRepository @Inject constructor(
      */
     suspend fun downloadMedia(mediaId: String): Result<String> {
         return mediaRepository.downloadMedia(mediaId)
+    }
+    
+    /**
+     * Send a contact message
+     */
+    suspend fun sendContactMessage(
+        conversationId: String,
+        contactInfo: com.tcc.tarasulandroid.data.ContactInfo,
+        recipientId: String,
+        replyToMessageId: String? = null
+    ) = withContext(Dispatchers.IO) {
+        android.util.Log.d("MessagesRepository", "sendContactMessage - contact: ${contactInfo.name}")
+        
+        val currentUserId = securePreferencesManager.getUserEmail() ?: "me"
+        val conversation = messagesDao.getConversationById(conversationId)
+        val isEncrypted = conversation?.isEncryptionEnabled ?: false
+        
+        // Encrypt contact data if needed
+        val messageContent = if (isEncrypted) {
+            val key = getEncryptionKey(conversationId)
+            MessageEncryption.encrypt(contactInfo.toJsonString(), key)
+        } else {
+            contactInfo.toJsonString()
+        }
+        
+        val message = MessageEntity(
+            id = UUID.randomUUID().toString(),
+            conversationId = conversationId,
+            senderId = currentUserId,
+            recipientId = recipientId,
+            type = MessageType.CONTACT,
+            content = messageContent,
+            isEncrypted = isEncrypted,
+            timestamp = System.currentTimeMillis(),
+            status = MessageStatus.SENT,
+            direction = MessageDirection.OUTGOING,
+            replyToMessageId = replyToMessageId,
+            isSent = true,
+            isDelivered = false,
+            isRead = false,
+            isMine = true
+        )
+        
+        messagesDao.insertMessage(message)
+        
+        // Update conversation
+        messagesDao.updateConversationLastMessage(
+            conversationId = conversationId,
+            lastMessage = "👤 ${contactInfo.name}",
+            lastMessageTime = message.timestamp
+        )
+        
+        android.util.Log.d("MessagesRepository", "Contact message sent successfully")
     }
     
     /**
