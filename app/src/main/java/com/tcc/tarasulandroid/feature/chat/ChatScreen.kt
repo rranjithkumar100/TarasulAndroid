@@ -270,7 +270,11 @@ fun ChatScreen(
         contactsPermissionState.allPermissionsGranted,
         pendingMediaAction
     ) {
-        android.util.Log.d("ChatScreen", "Permission state changed - Pending: $pendingMediaAction")
+        android.util.Log.d("ChatScreen", "Permission state changed:")
+        android.util.Log.d("ChatScreen", "  - Pending: $pendingMediaAction")
+        android.util.Log.d("ChatScreen", "  - Camera granted: ${cameraPermissionState.allPermissionsGranted}")
+        android.util.Log.d("ChatScreen", "  - Media granted: ${mediaPermissionsState.allPermissionsGranted}")
+        android.util.Log.d("ChatScreen", "  - Contacts granted: ${contactsPermissionState.allPermissionsGranted}")
         
         when (pendingMediaAction) {
             "camera" -> {
