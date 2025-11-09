@@ -184,26 +184,57 @@ fun ChatScreen(
             // Clear focus from TextField to prevent crash
             coroutineScope.launch {
                 try {
-                    // Query contact name from URI
+                    // Extract full contact info
                     var contactName = "Unknown Contact"
+                    var contactId: String? = null
+                    val phoneNumbers = mutableListOf<String>()
+                    
+                    // Query contact basic info
                     context.contentResolver.query(
                         uri,
-                        arrayOf(android.provider.ContactsContract.Contacts.DISPLAY_NAME),
-                        null,
-                        null,
-                        null
+                        arrayOf(
+                            android.provider.ContactsContract.Contacts._ID,
+                            android.provider.ContactsContract.Contacts.DISPLAY_NAME,
+                            android.provider.ContactsContract.Contacts.HAS_PHONE_NUMBER
+                        ),
+                        null, null, null
                     )?.use { cursor ->
                         if (cursor.moveToFirst()) {
+                            val idIndex = cursor.getColumnIndex(android.provider.ContactsContract.Contacts._ID)
                             val nameIndex = cursor.getColumnIndex(android.provider.ContactsContract.Contacts.DISPLAY_NAME)
-                            if (nameIndex >= 0) {
-                                contactName = cursor.getString(nameIndex)
+                            
+                            if (idIndex >= 0) contactId = cursor.getString(idIndex)
+                            if (nameIndex >= 0) contactName = cursor.getString(nameIndex)
+                        }
+                    }
+                    
+                    // Query phone numbers
+                    contactId?.let { id ->
+                        context.contentResolver.query(
+                            android.provider.ContactsContract.CommonDataKinds.Phone.CONTENT_URI,
+                            arrayOf(android.provider.ContactsContract.CommonDataKinds.Phone.NUMBER),
+                            "${android.provider.ContactsContract.CommonDataKinds.Phone.CONTACT_ID} = ?",
+                            arrayOf(id),
+                            null
+                        )?.use { cursor ->
+                            val phoneIndex = cursor.getColumnIndex(android.provider.ContactsContract.CommonDataKinds.Phone.NUMBER)
+                            while (cursor.moveToNext() && phoneIndex >= 0) {
+                                phoneNumbers.add(cursor.getString(phoneIndex))
                             }
                         }
                     }
                     
+                    // Create contact info JSON
+                    val contactInfo = com.tcc.tarasulandroid.data.ContactInfo(
+                        name = contactName,
+                        phoneNumbers = phoneNumbers,
+                        photoUri = uri.toString()
+                    )
+                    
+                    // Send as contact message
                     messagesRepository.sendMessage(
                         conversationId = conversationId ?: return@launch,
-                        content = "Shared contact: $contactName",
+                        content = contactInfo.toJsonString(),
                         recipientId = contact.id
                     )
                 } catch (e: Exception) {
