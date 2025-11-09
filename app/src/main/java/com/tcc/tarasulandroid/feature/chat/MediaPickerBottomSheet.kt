@@ -7,6 +7,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.tcc.tarasulandroid.R
 
@@ -30,14 +31,14 @@ fun MediaPickerBottomSheet(
                 .padding(bottom = 16.dp)
         ) {
             Text(
-                text = "Send Media",
+                text = stringResource(R.string.send_media),
                 style = MaterialTheme.typography.titleMedium,
                 modifier = Modifier.padding(16.dp)
             )
             
             MediaOption(
                 iconRes = R.drawable.ic_camera,
-                label = "Camera",
+                label = stringResource(R.string.camera),
                 onClick = {
                     onCameraClick()
                     onDismiss()
@@ -46,7 +47,7 @@ fun MediaPickerBottomSheet(
             
             MediaOption(
                 iconRes = R.drawable.ic_gallery,
-                label = "Gallery",
+                label = stringResource(R.string.gallery),
                 onClick = {
                     onGalleryClick()
                     onDismiss()
@@ -55,7 +56,7 @@ fun MediaPickerBottomSheet(
             
             MediaOption(
                 iconRes = R.drawable.ic_video,
-                label = "Video",
+                label = stringResource(R.string.video),
                 onClick = {
                     onVideoClick()
                     onDismiss()
@@ -64,7 +65,7 @@ fun MediaPickerBottomSheet(
             
             MediaOption(
                 iconRes = R.drawable.ic_file,
-                label = "Document",
+                label = stringResource(R.string.document),
                 onClick = {
                     onFileClick()
                     onDismiss()
@@ -73,7 +74,7 @@ fun MediaPickerBottomSheet(
             
             MediaOption(
                 iconRes = R.drawable.ic_contact,
-                label = "Contact",
+                label = stringResource(R.string.contact),
                 onClick = {
                     onContactClick()
                     onDismiss()

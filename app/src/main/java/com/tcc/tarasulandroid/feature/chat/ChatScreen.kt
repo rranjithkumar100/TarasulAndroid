@@ -330,7 +330,7 @@ fun ChatScreen(
                     ) {
                         Icon(
                             painter = painterResource(id = R.drawable.ic_attach),
-                            contentDescription = "Attach media",
+                            contentDescription = stringResource(R.string.attach_media),
                             tint = MaterialTheme.colorScheme.primary
                         )
                     }

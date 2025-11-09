@@ -11,6 +11,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import coil.compose.AsyncImage
@@ -115,7 +116,7 @@ private fun ImageMessageContent(
                 if (media.localPath != null && File(media.localPath).exists()) {
                     AsyncImage(
                         model = File(media.localPath),
-                        contentDescription = "Image message",
+                        contentDescription = stringResource(R.string.image_message),
                         modifier = Modifier.fillMaxSize(),
                         contentScale = ContentScale.Crop
                     )
@@ -131,7 +132,7 @@ private fun ImageMessageContent(
                     Column(horizontalAlignment = Alignment.CenterHorizontally) {
                         CircularProgressIndicator()
                         Text(
-                            text = "${media.downloadProgress}%",
+                            text = stringResource(R.string.download_progress, media.downloadProgress),
                             style = MaterialTheme.typography.bodySmall,
                             modifier = Modifier.padding(top = 8.dp)
                         )
@@ -146,9 +147,12 @@ private fun ImageMessageContent(
                     contentAlignment = Alignment.Center
                 ) {
                     Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                        Text("Download failed", style = MaterialTheme.typography.bodySmall)
+                        Text(
+                            text = stringResource(R.string.download_failed),
+                            style = MaterialTheme.typography.bodySmall
+                        )
                         TextButton(onClick = { onDownloadClick(media.mediaId) }) {
-                            Text("Retry")
+                            Text(stringResource(R.string.retry))
                         }
                     }
                 }
@@ -162,7 +166,7 @@ private fun ImageMessageContent(
                     contentAlignment = Alignment.Center
                 ) {
                     TextButton(onClick = { onDownloadClick(media.mediaId) }) {
-                        Text("Download")
+                        Text(stringResource(R.string.download))
                     }
                 }
             }
@@ -189,7 +193,7 @@ private fun VideoMessageContent(
         if (media.thumbnailPath != null && File(media.thumbnailPath).exists()) {
             AsyncImage(
                 model = File(media.thumbnailPath),
-                contentDescription = "Video thumbnail",
+                contentDescription = stringResource(R.string.video_thumbnail),
                 modifier = Modifier.fillMaxSize(),
                 contentScale = ContentScale.Crop
             )
@@ -198,7 +202,7 @@ private fun VideoMessageContent(
         // Show download button or play icon
         if (media.downloadStatus != DownloadStatus.DONE) {
             TextButton(onClick = { onDownloadClick(media.mediaId) }) {
-                Text("Download Video")
+                Text(stringResource(R.string.download_video))
             }
         }
     }
@@ -216,20 +220,20 @@ private fun FileMessageContent(
             .fillMaxWidth()
             .padding(8.dp),
         verticalAlignment = Alignment.CenterVertically
-    ) {
-        Icon(
-            painter = painterResource(id = R.drawable.ic_file),
-            contentDescription = "File",
-            modifier = Modifier.size(40.dp)
-        )
-        
-        Spacer(modifier = Modifier.width(8.dp))
-        
-        Column(modifier = Modifier.weight(1f)) {
-            Text(
-                text = media.fileName ?: "File",
-                style = MaterialTheme.typography.bodyMedium
+        ) {
+            Icon(
+                painter = painterResource(id = R.drawable.ic_file),
+                contentDescription = stringResource(R.string.file),
+                modifier = Modifier.size(40.dp)
             )
+            
+            Spacer(modifier = Modifier.width(8.dp))
+            
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = media.fileName ?: stringResource(R.string.file),
+                    style = MaterialTheme.typography.bodyMedium
+                )
             if (media.fileSize != null) {
                 Text(
                     text = formatFileSize(media.fileSize),
@@ -240,7 +244,7 @@ private fun FileMessageContent(
         
         if (media.downloadStatus != DownloadStatus.DONE) {
             TextButton(onClick = { onDownloadClick(media.mediaId) }) {
-                Text("Download")
+                Text(stringResource(R.string.download))
             }
         }
     }
@@ -283,7 +287,7 @@ private fun ContactMessageContent(message: com.tcc.tarasulandroid.data.db.Messag
                 } else {
                     Icon(
                         painter = painterResource(id = R.drawable.ic_person),
-                        contentDescription = "Contact",
+                        contentDescription = stringResource(R.string.contact),
                         modifier = Modifier.size(24.dp),
                         tint = MaterialTheme.colorScheme.onPrimaryContainer
                     )
@@ -297,7 +301,7 @@ private fun ContactMessageContent(message: com.tcc.tarasulandroid.data.db.Messag
                 modifier = Modifier.weight(1f)
             ) {
                 Text(
-                    text = contactInfo?.name ?: "Unknown Contact",
+                    text = contactInfo?.name ?: stringResource(R.string.unknown_contact),
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.SemiBold
                 )
@@ -311,14 +315,14 @@ private fun ContactMessageContent(message: com.tcc.tarasulandroid.data.db.Messag
                     
                     if (contactInfo.phoneNumbers.size > 1) {
                         Text(
-                            text = "+${contactInfo.phoneNumbers.size - 1} more",
+                            text = stringResource(R.string.more_numbers, contactInfo.phoneNumbers.size - 1),
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                     }
                 } else {
                     Text(
-                        text = "Contact information",
+                        text = stringResource(R.string.contact_information),
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
@@ -337,7 +341,7 @@ private fun ContactMessageContent(message: com.tcc.tarasulandroid.data.db.Messag
                 ) {
                     Icon(
                         painter = painterResource(id = R.drawable.ic_chat),
-                        contentDescription = "Message contact",
+                        contentDescription = stringResource(R.string.message_contact),
                         modifier = Modifier.size(20.dp),
                         tint = MaterialTheme.colorScheme.onPrimary
                     )
@@ -359,20 +363,20 @@ private fun AudioMessageContent(
             .fillMaxWidth()
             .padding(8.dp),
         verticalAlignment = Alignment.CenterVertically
-    ) {
-        Icon(
-            painter = painterResource(id = R.drawable.ic_audio),
-            contentDescription = "Audio",
-            modifier = Modifier.size(40.dp)
-        )
-        
-        Spacer(modifier = Modifier.width(8.dp))
-        
-        Column(modifier = Modifier.weight(1f)) {
-            Text(
-                text = media.fileName ?: "Audio",
-                style = MaterialTheme.typography.bodyMedium
+        ) {
+            Icon(
+                painter = painterResource(id = R.drawable.ic_audio),
+                contentDescription = stringResource(R.string.audio),
+                modifier = Modifier.size(40.dp)
             )
+            
+            Spacer(modifier = Modifier.width(8.dp))
+            
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = media.fileName ?: stringResource(R.string.audio),
+                    style = MaterialTheme.typography.bodyMedium
+                )
             if (media.durationMs != null) {
                 Text(
                     text = formatDuration(media.durationMs),
@@ -383,7 +387,7 @@ private fun AudioMessageContent(
         
         if (media.downloadStatus != DownloadStatus.DONE) {
             TextButton(onClick = { onDownloadClick(media.mediaId) }) {
-                Text("Download")
+                Text(stringResource(R.string.download))
             }
         }
     }
