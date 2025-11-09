@@ -49,13 +49,16 @@ fun ChatScreen(
     
     LaunchedEffect(contact.id) {
         try {
+            android.util.Log.d("ChatScreen", "Getting conversation for contact: ${contact.id}, ${contact.name}")
             val conversation = messagesRepository.getOrCreateConversation(
                 contactId = contact.id,
                 contactName = contact.name,
                 contactPhoneNumber = "" // Phone number might not be available from navigation
             )
             conversationId = conversation.id
+            android.util.Log.d("ChatScreen", "Conversation ID set to: $conversationId")
         } catch (e: Exception) {
+            android.util.Log.e("ChatScreen", "Error getting conversation", e)
             e.printStackTrace()
         }
     }
@@ -220,20 +223,28 @@ fun ChatScreen(
                     Spacer(modifier = Modifier.width(8.dp))
                     FloatingActionButton(
                         onClick = {
+                            android.util.Log.d("ChatScreen", "Send button clicked - messageText: $messageText, conversationId: $conversationId")
                             if (messageText.isNotBlank() && conversationId != null) {
+                                val textToSend = messageText
+                                messageText = "" // Clear immediately for better UX
+                                
                                 // Send message via repository
                                 kotlinx.coroutines.GlobalScope.launch {
                                     try {
+                                        android.util.Log.d("ChatScreen", "Sending message to repository...")
                                         messagesRepository.sendMessage(
                                             conversationId = conversationId!!,
-                                            content = messageText,
+                                            content = textToSend,
                                             recipientId = contact.id
                                         )
+                                        android.util.Log.d("ChatScreen", "Message sent successfully")
                                     } catch (e: Exception) {
+                                        android.util.Log.e("ChatScreen", "Error sending message", e)
                                         e.printStackTrace()
                                     }
                                 }
-                                messageText = ""
+                            } else {
+                                android.util.Log.d("ChatScreen", "Cannot send - messageText blank or conversationId null")
                             }
                         },
                         modifier = Modifier.size(48.dp),

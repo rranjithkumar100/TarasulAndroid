@@ -74,10 +74,15 @@ class MessagesRepository @Inject constructor(
         content: String,
         recipientId: String
     ) = withContext(Dispatchers.IO) {
+        android.util.Log.d("MessagesRepository", "sendMessage called - conversationId: $conversationId, content: $content, recipientId: $recipientId")
+        
         val currentUserId = securePreferencesManager.getUserEmail() ?: "me"
+        android.util.Log.d("MessagesRepository", "currentUserId: $currentUserId")
         
         // Check if encryption is enabled for this conversation
         val conversation = messagesDao.getConversationById(conversationId)
+        android.util.Log.d("MessagesRepository", "conversation found: ${conversation != null}, id: ${conversation?.id}")
+        
         val isEncrypted = conversation?.isEncryptionEnabled ?: false
         
         val messageContent = if (isEncrypted) {
@@ -101,7 +106,9 @@ class MessagesRepository @Inject constructor(
             isMine = true
         )
         
+        android.util.Log.d("MessagesRepository", "Inserting message: ${message.id}, content: ${message.content}")
         messagesDao.insertMessage(message)
+        android.util.Log.d("MessagesRepository", "Message inserted successfully")
         
         // Update conversation with last message
         messagesDao.updateConversationLastMessage(
@@ -109,6 +116,7 @@ class MessagesRepository @Inject constructor(
             lastMessage = if (isEncrypted) messageContent else content,
             lastMessageTime = message.timestamp
         )
+        android.util.Log.d("MessagesRepository", "Conversation updated with last message")
     }
     
     /**
@@ -119,9 +127,12 @@ class MessagesRepository @Inject constructor(
         contactName: String,
         contactPhoneNumber: String
     ): ConversationEntity = withContext(Dispatchers.IO) {
+        android.util.Log.d("MessagesRepository", "getOrCreateConversation - contactId: $contactId, contactName: $contactName")
+        
         // Check if conversation already exists
         val existing = messagesDao.getConversationByContactId(contactId)
         if (existing != null) {
+            android.util.Log.d("MessagesRepository", "Found existing conversation: ${existing.id}")
             return@withContext existing
         }
         
@@ -138,7 +149,10 @@ class MessagesRepository @Inject constructor(
             isEncryptionEnabled = false
         )
         
+        android.util.Log.d("MessagesRepository", "Creating new conversation: ${conversation.id}")
         messagesDao.insertConversation(conversation)
+        android.util.Log.d("MessagesRepository", "Conversation created successfully")
+        
         return@withContext conversation
     }
     
