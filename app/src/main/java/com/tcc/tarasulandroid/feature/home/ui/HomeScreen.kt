@@ -66,6 +66,9 @@ fun HomeScreen(
                 0 -> ChatListScreen(
                     onContactClick = { contact ->
                         navController.navigate("chat/${contact.id}/${contact.name}/${contact.isOnline}")
+                    },
+                    onNewMessageClick = {
+                        navController.navigate("contacts")
                     }
                 )
                 1 -> ProfileScreen()

@@ -8,6 +8,7 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 import com.tcc.tarasulandroid.feature.chat.ChatScreen
+import com.tcc.tarasulandroid.feature.contacts.ContactListScreen
 import com.tcc.tarasulandroid.feature.home.model.Contact
 import com.tcc.tarasulandroid.feature.home.ui.HomeScreen
 import com.tcc.tarasulandroid.feature.login.LoginScreen
@@ -50,6 +51,10 @@ fun NavGraph(modifier: Modifier = Modifier) {
                 contact = contact,
                 onBackClick = { navController.popBackStack() }
             )
+        }
+        
+        composable("contacts") {
+            ContactListScreen(navController = navController)
         }
     }
 }

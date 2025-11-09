@@ -89,14 +89,20 @@
     
     <!-- Contacts -->
     <string name="contacts">جهات الاتصال</string>
-    <string name="search_contacts">بحث في جهات الاتصال</string>
+    <string name="search_contacts">بحث عن جهات الاتصال…</string>
     <string name="sync_contacts">مزامنة جهات الاتصال</string>
-    <string name="no_contacts_found">لم يتم العثور على جهات اتصال</string>
-    <string name="loading_contacts">جاري تحميل جهات الاتصال...</string>
-    <string name="permission_contacts_required">مطلوب إذن جهات الاتصال</string>
-    <string name="permission_contacts_message">نحتاج إلى الوصول إلى جهات الاتصال الخاصة بك للمساعدة في التواصل مع الأصدقاء. يرجى تمكين إذن جهات الاتصال في الإعدادات.</string>
+    <string name="sync_now">مزامنة الآن</string>
+    <string name="no_contacts_found">لا توجد جهات اتصال بعد</string>
+    <string name="no_contacts_message">اضغط على زر المزامنة لتحميل جهات الاتصال من جهازك</string>
+    <string name="loading_contacts">جاري التحميل…</string>
+    <string name="syncing_contacts">جاري المزامنة…</string>
+    <string name="permission_contacts_title">مطلوب إذن جهات الاتصال</string>
+    <string name="permission_contacts_message">لعرض جهات الاتصال والدردشة معهم، نحتاج إلى الوصول إلى جهات الاتصال على جهازك. يرجى منح الإذن في الإعدادات.</string>
     <string name="open_settings">فتح الإعدادات</string>
     <string name="grant_permission">منح الإذن</string>
+    <string name="try_again">حاول مرة أخرى</string>
     <string name="syncing">جاري المزامنة...</string>
     <string name="contacts_loaded">تم تحميل %d جهة اتصال</string>
+    <string name="no_results_found">لم يتم العثور على نتائج</string>
+    <string name="no_results_message">لا توجد جهات اتصال تطابق \"%1$s\"</string>
 </resources>

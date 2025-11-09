@@ -89,14 +89,20 @@
     
     <!-- Contacts -->
     <string name="contacts">Contacts</string>
-    <string name="search_contacts">Search contacts</string>
+    <string name="search_contacts">Search contacts…</string>
     <string name="sync_contacts">Sync Contacts</string>
-    <string name="no_contacts_found">No contacts found</string>
-    <string name="loading_contacts">Loading contacts...</string>
-    <string name="permission_contacts_required">Contact Permission Required</string>
-    <string name="permission_contacts_message">We need access to your contacts to help you connect with friends. Please enable contact permission in settings.</string>
+    <string name="sync_now">Sync Now</string>
+    <string name="no_contacts_found">No Contacts Yet</string>
+    <string name="no_contacts_message">Tap the sync button to load your device contacts</string>
+    <string name="loading_contacts">Loading contacts…</string>
+    <string name="syncing_contacts">Syncing contacts…</string>
+    <string name="permission_contacts_title">Contacts Permission Required</string>
+    <string name="permission_contacts_message">To view and chat with your contacts, we need access to your device contacts. Please grant permission in Settings.</string>
     <string name="open_settings">Open Settings</string>
     <string name="grant_permission">Grant Permission</string>
+    <string name="try_again">Try Again</string>
     <string name="syncing">Syncing...</string>
     <string name="contacts_loaded">%d contacts loaded</string>
+    <string name="no_results_found">No Results Found</string>
+    <string name="no_results_message">No contacts match \"%1$s\"</string>
 </resources>

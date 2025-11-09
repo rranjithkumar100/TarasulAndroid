@@ -29,6 +29,7 @@ import java.util.*
 @Composable
 fun ChatListScreen(
     onContactClick: (Contact) -> Unit,
+    onNewMessageClick: () -> Unit = {},
     viewModel: ChatListViewModel = androidx.hilt.navigation.compose.hiltViewModel()
 ) {
     val contacts by viewModel.contacts.collectAsState()
@@ -51,7 +52,7 @@ fun ChatListScreen(
         },
         floatingActionButton = {
             FloatingActionButton(
-                onClick = { /* TODO: Handle new message */ },
+                onClick = onNewMessageClick,
                 containerColor = MaterialTheme.colorScheme.primary
             ) {
                 Icon(Icons.Default.Add, contentDescription = stringResource(R.string.new_message))
