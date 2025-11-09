@@ -129,7 +129,9 @@ class MessagesRepository @Inject constructor(
             isSent = true,
             isDelivered = false,
             isRead = false,
-            isMine = true
+            isMine = true,
+            direction = MessageDirection.OUTGOING,
+            status = MessageStatus.PENDING
         )
         
         android.util.Log.d("MessagesRepository", "Inserting message: ${message.id}, content: ${message.content}")
