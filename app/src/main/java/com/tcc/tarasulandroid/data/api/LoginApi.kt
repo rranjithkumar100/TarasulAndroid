@@ -81,7 +81,7 @@ class LoginApi @Inject constructor() {
         }
 
         // For demo purposes: accept any email with password "password123"
-        if (request.password == "password123") {
+        if (request.password == "1234") {
             val userName = request.email.substringBefore("@").replaceFirstChar { it.uppercase() }
             return LoginResponse(
                 success = true,

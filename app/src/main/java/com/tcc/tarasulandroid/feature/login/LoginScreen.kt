@@ -40,10 +40,10 @@ fun LoginScreen(
     val context = LocalContext.current
     // Get LanguageManager from the application context, not as ViewModel
     val languageManager = remember {
-        (context.applicationContext as com.tcc.tarasulandroid.TarasulApplication).let { app ->
+        (context.applicationContext as com.tcc.tarasulandroid.TarasulApplication).let {
             // Get from Hilt's entry point
             dagger.hilt.android.EntryPointAccessors.fromApplication(
-                app,
+                it,
                 LanguageManagerEntryPoint::class.java
             ).languageManager()
         }
@@ -56,7 +56,7 @@ fun LoginScreen(
     val uiState by viewModel.uiState.collectAsState()
     val focusManager = LocalFocusManager.current
     val scrollState = rememberScrollState()
-    val context = LocalContext.current
+    // val context = LocalContext.current  <-- This is the duplicate declaration
     val activity = context as? Activity
 
     LaunchedEffect(Unit) {
@@ -279,9 +279,7 @@ fun LoginScreen(
                         Text(stringResource(R.string.ok))
                     }
                 }
-            ) {
-                Text(uiState.errorMessage ?: "")
-            }
+            ) { Text(uiState.errorMessage ?: "") }
         }
     }
 
@@ -299,7 +297,7 @@ fun LoginScreen(
                                 showLanguageDialog = false
                             },
                             modifier = Modifier.fillMaxWidth()
-                        ) {
+                        ) { 
                             Row(
                                 modifier = Modifier.fillMaxWidth(),
                                 horizontalArrangement = Arrangement.Start,
