@@ -22,6 +22,7 @@ import androidx.compose.ui.unit.dp
 import com.tcc.tarasulandroid.R
 import com.tcc.tarasulandroid.feature.home.model.Contact
 import com.tcc.tarasulandroid.feature.home.model.Message
+import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
 import java.util.*
 
@@ -100,7 +101,7 @@ fun ChatScreen(
                 to = "Me",
                 text = "How about 5 PM?",
                 time = System.currentTimeMillis() - 600000
-            )
+            ))
             // Don't add dummy messages to state, just for demo
         }
     }
