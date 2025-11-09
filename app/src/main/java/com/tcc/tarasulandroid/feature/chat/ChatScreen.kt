@@ -76,9 +76,7 @@ fun ChatScreen(
     val listState = rememberLazyListState()
 
     Scaffold(
-        modifier = Modifier
-            .fillMaxSize()
-            .imePadding(), // Add keyboard padding at Scaffold level
+        modifier = Modifier.fillMaxSize(),
         topBar = {
             TopAppBar(
                 title = {
@@ -197,7 +195,8 @@ fun ChatScreen(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(padding)
-                .padding(horizontal = 16.dp),
+                .padding(horizontal = 16.dp)
+                .imePadding(), // Add IME padding to messages list only
             state = listState,
             reverseLayout = false,
             contentPadding = PaddingValues(bottom = 8.dp) // Add bottom padding for last message
