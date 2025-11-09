@@ -1,95 +1,74 @@
 package com.tcc.tarasulandroid.feature.home.ui
 
-import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
-import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.Icon
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Switch
-import androidx.compose.material3.Tab
-import androidx.compose.material3.TabRow
-import androidx.compose.material3.Text
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.collectAsState
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
-import androidx.compose.ui.Alignment
-import androidx.compose.ui.Modifier
-import androidx.compose.ui.res.painterResource
-import androidx.compose.ui.unit.dp
-import androidx.hilt.navigation.compose.hiltViewModel
-import com.tcc.tarasulandroid.feature.home.model.Message
-import com.tcc.tarasulandroid.viewmodels.HomeViewModel
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.ChatBubble
+import androidx.compose.material.icons.filled.Person
+import androidx.compose.material.icons.outlined.ChatBubbleOutline
+import androidx.compose.material.icons.outlined.Person
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
+import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.navigation.NavController
+import com.tcc.tarasulandroid.feature.chat.ChatListScreen
+import com.tcc.tarasulandroid.feature.home.ui.profile.ProfileScreen
 
 @Composable
 fun HomeScreen(
-    viewModel: HomeViewModel = hiltViewModel()
+    navController: NavController
 ) {
-    val uiState by viewModel.uiState.collectAsState()
     var selectedTab by remember { mutableStateOf(0) }
-    val tabs = listOf("Chat", "Profile")
+    
+    val tabs = listOf(
+        BottomNavItem("Chats", Icons.Outlined.ChatBubbleOutline, Icons.Filled.ChatBubble),
+        BottomNavItem("Profile", Icons.Outlined.Person, Icons.Filled.Person)
+    )
 
     Scaffold(
-        topBar = {
-            TabRow(selectedTabIndex = selectedTab) {
-                tabs.forEachIndexed { index, title ->
-                    Tab(
+        bottomBar = {
+            NavigationBar(
+                containerColor = MaterialTheme.colorScheme.surface,
+                tonalElevation = 8.dp
+            ) {
+                tabs.forEachIndexed { index, item ->
+                    NavigationBarItem(
                         selected = selectedTab == index,
                         onClick = { selectedTab = index },
-                        text = { Text(text = title) }
+                        icon = {
+                            Icon(
+                                imageVector = if (selectedTab == index) item.selectedIcon else item.icon,
+                                contentDescription = item.title
+                            )
+                        },
+                        label = { Text(text = item.title) },
+                        colors = NavigationBarItemDefaults.colors(
+                            selectedIconColor = MaterialTheme.colorScheme.primary,
+                            selectedTextColor = MaterialTheme.colorScheme.primary,
+                            unselectedIconColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                            unselectedTextColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                            indicatorColor = MaterialTheme.colorScheme.primaryContainer
+                        )
                     )
                 }
             }
         }
-    ) {
-        Box(modifier = Modifier.padding(it)){
+    ) { padding ->
+        androidx.compose.foundation.layout.Box(
+            modifier = androidx.compose.ui.Modifier.padding(padding)
+        ) {
             when (selectedTab) {
-                0 -> ChatScreen(uiState.messages, uiState.lastEvent)
-                1 -> ProfileScreen(uiState.isDarkTheme, viewModel::setDarkTheme)
+                0 -> ChatListScreen(
+                    onContactClick = { contact ->
+                        navController.navigate("chat/${contact.id}/${contact.name}/${contact.isOnline}")
+                    }
+                )
+                1 -> ProfileScreen()
             }
         }
     }
 }
 
-@Composable
-fun ChatScreen(messages: List<Message>, lastEvent: String) {
-    Column(modifier = Modifier.fillMaxSize()) {
-        Text(text = "Last event: $lastEvent")
-        LazyColumn {
-            items(messages) {
-                Text(text = "${it.from}: ${it.text}", modifier = Modifier.padding(8.dp))
-            }
-        }
-    }
-
-}
-
-@Composable
-fun ProfileScreen(
-    isDarkTheme: Boolean,
-    onThemeChange: (Boolean) -> Unit
-) {
-    Column(modifier = Modifier.padding(16.dp)) {
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            Text(text = "Dark Theme")
-            Switch(checked = isDarkTheme, onCheckedChange = onThemeChange)
-        }
-        Spacer(modifier = Modifier.height(16.dp))
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            Icon(painter = painterResource(id = android.R.drawable.ic_menu_myplaces), contentDescription = null)
-            Text(text = "User Name")
-        }
-    }
-}
+data class BottomNavItem(
+    val title: String,
+    val icon: ImageVector,
+    val selectedIcon: ImageVector
+)
