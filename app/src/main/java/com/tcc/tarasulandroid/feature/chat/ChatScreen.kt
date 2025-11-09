@@ -15,6 +15,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -30,11 +31,41 @@ fun ChatScreen(
     contact: Contact,
     onBackClick: () -> Unit
 ) {
+    val context = LocalContext.current
     var messageText by remember { mutableStateOf("") }
     
-    // Dummy messages for the chat
-    val messages = remember {
-        mutableStateListOf(
+    // Get MessagesRepository
+    val messagesRepository = remember {
+        val app = context.applicationContext as com.tcc.tarasulandroid.TarasulApplication
+        dagger.hilt.android.EntryPointAccessors.fromApplication(
+            app,
+            com.tcc.tarasulandroid.di.MessagesRepositoryEntryPoint::class.java
+        ).messagesRepository()
+    }
+    
+    // Load messages from database
+    val conversationId = remember { contact.id }
+    val messagesFromDb by messagesRepository.getMessagesForConversation(conversationId)
+        .collectAsState(initial = emptyList())
+    
+    // Convert DB messages to UI messages
+    val messages = remember(messagesFromDb) {
+        messagesFromDb.map { msg ->
+            Message(
+                id = msg.id,
+                from = if (msg.isMine) "Me" else contact.name,
+                to = if (msg.isMine) contact.name else "Me",
+                text = msg.content,
+                time = msg.timestamp
+            )
+        }.toMutableStateList()
+    }
+    
+    // Dummy messages for initial demo (only if DB is empty)
+    LaunchedEffect(messagesFromDb.isEmpty()) {
+        if (messagesFromDb.isEmpty()) {
+            // Add some dummy messages only on first load
+            val dummyMessages = listOf(
             Message(
                 id = "1",
                 from = contact.name,
@@ -70,10 +101,18 @@ fun ChatScreen(
                 text = "How about 5 PM?",
                 time = System.currentTimeMillis() - 600000
             )
-        )
+            // Don't add dummy messages to state, just for demo
+        }
     }
 
     val listState = rememberLazyListState()
+    
+    // Auto-scroll to bottom when new message is added or keyboard appears
+    LaunchedEffect(messages.size) {
+        if (messages.isNotEmpty()) {
+            listState.animateScrollToItem(messages.size - 1)
+        }
+    }
 
     Scaffold(
         modifier = Modifier.fillMaxSize(),
@@ -166,15 +205,18 @@ fun ChatScreen(
                     FloatingActionButton(
                         onClick = {
                             if (messageText.isNotBlank()) {
-                                messages.add(
-                                    Message(
-                                        id = UUID.randomUUID().toString(),
-                                        from = "Me",
-                                        to = contact.name,
-                                        text = messageText,
-                                        time = System.currentTimeMillis()
-                                    )
-                                )
+                                // Send message via repository
+                                kotlinx.coroutines.GlobalScope.launch {
+                                    try {
+                                        messagesRepository.sendMessage(
+                                            conversationId = conversationId,
+                                            content = messageText,
+                                            recipientId = contact.id
+                                        )
+                                    } catch (e: Exception) {
+                                        e.printStackTrace()
+                                    }
+                                }
                                 messageText = ""
                             }
                         },
