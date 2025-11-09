@@ -49,11 +49,41 @@ class MainActivity : BaseActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
+        
+        // Check login state before setting up UI
+        val isLoggedIn = checkLoginState()
+        
         setContent {
             val isDarkTheme by viewModel.isDarkTheme.collectAsState()
             TarasulTheme(darkTheme = isDarkTheme) {
-                NavGraph(modifier = Modifier.fillMaxSize())
+                NavGraph(
+                    startDestination = if (isLoggedIn) "home" else "login",
+                    modifier = Modifier.fillMaxSize()
+                )
             }
+        }
+    }
+    
+    private fun checkLoginState(): Boolean {
+        // Read login state from encrypted preferences
+        // Using MasterKey early, before Hilt injection
+        return try {
+            val masterKey = androidx.security.crypto.MasterKey.Builder(this)
+                .setKeyScheme(androidx.security.crypto.MasterKey.KeyScheme.AES256_GCM)
+                .build()
+            
+            val securePrefs = androidx.security.crypto.EncryptedSharedPreferences.create(
+                this,
+                "secure_prefs",
+                masterKey,
+                androidx.security.crypto.EncryptedSharedPreferences.PrefKeyEncryptionScheme.AES256_SIV,
+                androidx.security.crypto.EncryptedSharedPreferences.PrefValueEncryptionScheme.AES256_GCM
+            )
+            
+            securePrefs.getBoolean("is_logged_in", false)
+        } catch (e: Exception) {
+            // If there's any error reading secure prefs, default to login screen
+            false
         }
     }
 }

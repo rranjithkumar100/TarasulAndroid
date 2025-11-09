@@ -9,16 +9,31 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavController
 import com.tcc.tarasulandroid.R
 import com.tcc.tarasulandroid.feature.chat.ChatListScreen
 import com.tcc.tarasulandroid.feature.home.ui.profile.ProfileScreen
+import com.tcc.tarasulandroid.viewmodels.MainViewModel
 
 @Composable
 fun HomeScreen(
-    navController: NavController
+    navController: NavController,
+    viewModel: MainViewModel = hiltViewModel()
 ) {
     var selectedTab by remember { mutableStateOf(0) }
+    val logoutEvent by viewModel.logoutEvent.collectAsState()
+    
+    // Handle logout event
+    LaunchedEffect(logoutEvent) {
+        if (logoutEvent) {
+            viewModel.resetLogoutEvent()
+            // Navigate to login and clear back stack
+            navController.navigate("login") {
+                popUpTo(0) { inclusive = true }
+            }
+        }
+    }
     
     val tabs = listOf(
         stringResource(R.string.chats),
@@ -71,7 +86,7 @@ fun HomeScreen(
                         navController.navigate("contacts")
                     }
                 )
-                1 -> ProfileScreen()
+                1 -> ProfileScreen(viewModel = viewModel)
             }
         }
     }

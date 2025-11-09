@@ -14,11 +14,14 @@ import com.tcc.tarasulandroid.feature.home.ui.HomeScreen
 import com.tcc.tarasulandroid.feature.login.LoginScreen
 
 @Composable
-fun NavGraph(modifier: Modifier = Modifier) {
+fun NavGraph(
+    startDestination: String = "login",
+    modifier: Modifier = Modifier
+) {
     val navController = rememberNavController()
     NavHost(
         navController = navController,
-        startDestination = "login",
+        startDestination = startDestination,
         modifier = modifier
     ) {
         composable("login") {

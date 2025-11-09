@@ -205,7 +205,7 @@ fun ProfileScreen(
                 Spacer(modifier = Modifier.height(16.dp))
 
                 Button(
-                    onClick = { /* TODO: Logout */ },
+                    onClick = { viewModel.logout() },
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(horizontal = 8.dp),
