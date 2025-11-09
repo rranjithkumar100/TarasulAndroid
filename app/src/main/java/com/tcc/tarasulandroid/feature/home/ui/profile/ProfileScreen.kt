@@ -13,7 +13,7 @@ import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.Settings
-import androidx.compose.material.icons.filled.Language
+import androidx.compose.material.icons.filled.Translate
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -130,7 +130,7 @@ fun ProfileScreen(
                 )
 
                 ProfileSettingItem(
-                    icon = Icons.Default.Language,
+                    icon = Icons.Default.Translate,
                     title = stringResource(R.string.language_settings),
                     subtitle = stringResource(R.string.language_settings_desc),
                     onClick = { showLanguageDialog = true }
