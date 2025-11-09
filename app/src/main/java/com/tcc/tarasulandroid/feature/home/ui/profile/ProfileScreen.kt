@@ -13,13 +13,13 @@ import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.Settings
-import androidx.compose.material.icons.filled.Translate
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -130,7 +130,7 @@ fun ProfileScreen(
                 )
 
                 ProfileSettingItem(
-                    icon = Icons.Default.Translate,
+                    iconRes = R.drawable.ic_translate,
                     title = stringResource(R.string.language_settings),
                     subtitle = stringResource(R.string.language_settings_desc),
                     onClick = { showLanguageDialog = true }
@@ -261,7 +261,8 @@ fun ProfileScreen(
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun ProfileSettingItem(
-    icon: androidx.compose.ui.graphics.vector.ImageVector,
+    icon: androidx.compose.ui.graphics.vector.ImageVector? = null,
+    iconRes: Int? = null,
     title: String,
     subtitle: String,
     onClick: (() -> Unit)? = null,
@@ -278,12 +279,21 @@ private fun ProfileSettingItem(
                 .padding(horizontal = 8.dp, vertical = 12.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Icon(
-                imageVector = icon,
-                contentDescription = null,
-                tint = MaterialTheme.colorScheme.primary,
-                modifier = Modifier.size(24.dp)
-            )
+            if (icon != null) {
+                Icon(
+                    imageVector = icon,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.size(24.dp)
+                )
+            } else if (iconRes != null) {
+                Icon(
+                    painter = painterResource(id = iconRes),
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.size(24.dp)
+                )
+            }
             Spacer(modifier = Modifier.width(16.dp))
             Column(modifier = Modifier.weight(1f)) {
                 Text(

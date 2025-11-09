@@ -2,15 +2,11 @@ package com.tcc.tarasulandroid.feature.home.ui
 
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.padding
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Forum
-import androidx.compose.material.icons.filled.Person
-import androidx.compose.material.icons.outlined.Forum
-import androidx.compose.material.icons.outlined.Person
-import androidx.compose.ui.Modifier
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
@@ -25,8 +21,8 @@ fun HomeScreen(
     var selectedTab by remember { mutableStateOf(0) }
     
     val tabs = listOf(
-        BottomNavItem(stringResource(R.string.chats), Icons.Outlined.Forum, Icons.Filled.Forum),
-        BottomNavItem(stringResource(R.string.profile), Icons.Outlined.Person, Icons.Filled.Person)
+        stringResource(R.string.chats),
+        stringResource(R.string.profile)
     )
 
     Scaffold(
@@ -35,17 +31,22 @@ fun HomeScreen(
                 containerColor = MaterialTheme.colorScheme.surface,
                 tonalElevation = 8.dp
             ) {
-                tabs.forEachIndexed { index, item ->
+                tabs.forEachIndexed { index, title ->
                     NavigationBarItem(
                         selected = selectedTab == index,
                         onClick = { selectedTab = index },
                         icon = {
                             Icon(
-                                imageVector = if (selectedTab == index) item.selectedIcon else item.icon,
-                                contentDescription = item.title
+                                painter = painterResource(
+                                    id = when (index) {
+                                        0 -> if (selectedTab == index) R.drawable.ic_chat_filled else R.drawable.ic_chat
+                                        else -> if (selectedTab == index) R.drawable.ic_person else R.drawable.ic_person_outline
+                                    }
+                                ),
+                                contentDescription = title
                             )
                         },
-                        label = { Text(text = item.title) },
+                        label = { Text(text = title) },
                         colors = NavigationBarItemDefaults.colors(
                             selectedIconColor = MaterialTheme.colorScheme.primary,
                             selectedTextColor = MaterialTheme.colorScheme.primary,
@@ -72,9 +73,3 @@ fun HomeScreen(
         }
     }
 }
-
-data class BottomNavItem(
-    val title: String,
-    val icon: ImageVector,
-    val selectedIcon: ImageVector
-)

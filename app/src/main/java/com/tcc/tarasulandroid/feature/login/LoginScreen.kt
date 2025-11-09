@@ -9,7 +9,6 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Email
 import androidx.compose.material.icons.filled.Lock
-import androidx.compose.material.icons.filled.Translate
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -17,6 +16,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusDirection
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalFocusManager
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
@@ -81,7 +81,7 @@ fun LoginScreen(
                 modifier = Modifier.align(Alignment.End)
             ) {
                 Icon(
-                    imageVector = Icons.Default.Translate,
+                    painter = painterResource(id = R.drawable.ic_translate),
                     contentDescription = stringResource(R.string.language)
                 )
                 Spacer(modifier = Modifier.width(8.dp))
