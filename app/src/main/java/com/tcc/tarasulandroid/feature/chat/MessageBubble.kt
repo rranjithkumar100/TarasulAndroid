@@ -28,7 +28,7 @@ fun MessageBubble(
 ) {
     val message = messageWithMedia.message
     val media = messageWithMedia.media
-    val isOutgoing = message.isMine
+    val isOutgoing = message.direction == com.tcc.tarasulandroid.data.db.MessageDirection.OUTGOING
     
     Column(
         modifier = modifier

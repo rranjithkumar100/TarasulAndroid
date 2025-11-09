@@ -30,10 +30,7 @@ import com.tcc.tarasulandroid.R
 import com.tcc.tarasulandroid.core.*
 import com.tcc.tarasulandroid.data.db.MessageType
 import com.tcc.tarasulandroid.feature.home.model.Contact
-import com.tcc.tarasulandroid.feature.home.model.Message
 import kotlinx.coroutines.launch
-import java.text.SimpleDateFormat
-import java.util.*
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -69,27 +66,16 @@ fun ChatScreen(
         } catch (_: Exception) {}
     }
 
-    val messagesFromDb by messagesRepository
-        .getMessagesForConversation(conversationId ?: "")
+    // Fetch messages with media data
+    val messagesWithMediaFromDb by messagesRepository
+        .getMessagesWithMediaForConversation(conversationId ?: "")
         .collectAsState(initial = emptyList())
-
-    val messages = remember(messagesFromDb) {
-        messagesFromDb.map { msg ->
-            Message(
-                id = msg.id,
-                from = if (msg.isMine) "Me" else contact.name,
-                to = if (msg.isMine) contact.name else "Me",
-                text = msg.content,
-                time = msg.timestamp
-            )
-        }
-    }
 
     val listState = rememberLazyListState()
 
-    LaunchedEffect(messages.size) {
-        if (messages.isNotEmpty()) {
-            listState.animateScrollToItem(messages.size - 1)
+    LaunchedEffect(messagesWithMediaFromDb.size) {
+        if (messagesWithMediaFromDb.isNotEmpty()) {
+            listState.animateScrollToItem(messagesWithMediaFromDb.size - 1)
         }
     }
     
@@ -195,17 +181,33 @@ fun ChatScreen(
         contract = PickContactContract()
     ) { uri ->
         uri?.let {
-            // Handle contact selection
-            // You'd typically query the Contacts Provider here
+            // Clear focus from TextField to prevent crash
             coroutineScope.launch {
                 try {
+                    // Query contact name from URI
+                    var contactName = "Unknown Contact"
+                    context.contentResolver.query(
+                        uri,
+                        arrayOf(android.provider.ContactsContract.Contacts.DISPLAY_NAME),
+                        null,
+                        null,
+                        null
+                    )?.use { cursor ->
+                        if (cursor.moveToFirst()) {
+                            val nameIndex = cursor.getColumnIndex(android.provider.ContactsContract.Contacts.DISPLAY_NAME)
+                            if (nameIndex >= 0) {
+                                contactName = cursor.getString(nameIndex)
+                            }
+                        }
+                    }
+                    
                     messagesRepository.sendMessage(
                         conversationId = conversationId ?: return@launch,
-                        content = "Shared a contact",
+                        content = "Shared contact: $contactName",
                         recipientId = contact.id
                     )
                 } catch (e: Exception) {
-                    // Handle error
+                    android.util.Log.e("ChatScreen", "Error sending contact", e)
                 }
             }
         }
@@ -361,8 +363,16 @@ fun ChatScreen(
                 reverseLayout = false,
                 contentPadding = PaddingValues(vertical = 8.dp)
             ) {
-                items(items = messages, key = { it.id }) { message ->
-                    MessageBubble(message = message)
+                items(items = messagesWithMediaFromDb, key = { it.message.id }) { messageWithMedia ->
+                    // Use new MessageBubble that supports media
+                    com.tcc.tarasulandroid.feature.chat.MessageBubble(
+                        messageWithMedia = messageWithMedia,
+                        onDownloadClick = { mediaId ->
+                            coroutineScope.launch {
+                                messagesRepository.downloadMedia(mediaId)
+                            }
+                        }
+                    )
                     Spacer(modifier = Modifier.height(8.dp))
                 }
             }
@@ -399,52 +409,20 @@ fun ChatScreen(
                 filePickerLauncher.launch("*/*")
             },
             onContactClick = {
-                if (contactsPermissionState.allPermissionsGranted) {
-                    contactPickerLauncher.launch(Unit)
-                } else {
-                    contactsPermissionState.requestPermissions()
+                // Dismiss bottom sheet first
+                showMediaPicker = false
+                // Launch contact picker after a short delay to avoid TextField issues
+                coroutineScope.launch {
+                    kotlinx.coroutines.delay(100)
+                    if (contactsPermissionState.allPermissionsGranted) {
+                        contactPickerLauncher.launch(Unit)
+                    } else {
+                        contactsPermissionState.requestPermissions()
+                    }
                 }
             }
         )
     }
 }
 
-@Composable
-fun MessageBubble(message: Message) {
-    val isMe = message.from == "Me"
-
-    Column(
-        modifier = Modifier.fillMaxWidth(),
-        horizontalAlignment = if (isMe) Alignment.End else Alignment.Start
-    ) {
-        Surface(
-            shape = RoundedCornerShape(
-                topStart = 16.dp,
-                topEnd = 16.dp,
-                bottomStart = if (isMe) 16.dp else 4.dp,
-                bottomEnd = if (isMe) 4.dp else 16.dp
-            ),
-            color = if (isMe)
-                MaterialTheme.colorScheme.primaryContainer
-            else
-                MaterialTheme.colorScheme.surfaceVariant,
-            modifier = Modifier.widthIn(max = 280.dp)
-        ) {
-            Text(
-                text = message.text,
-                modifier = Modifier.padding(12.dp),
-                style = MaterialTheme.typography.bodyMedium,
-                color = if (isMe)
-                    MaterialTheme.colorScheme.onPrimaryContainer
-                else
-                    MaterialTheme.colorScheme.onSurfaceVariant
-            )
-        }
-        Spacer(modifier = Modifier.height(4.dp))
-        Text(
-            text = SimpleDateFormat("hh:mm a", Locale.getDefault()).format(Date(message.time)),
-            style = MaterialTheme.typography.labelSmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant
-        )
-    }
-}
+// Old MessageBubble removed - now using the one from MessageBubble.kt that supports media
