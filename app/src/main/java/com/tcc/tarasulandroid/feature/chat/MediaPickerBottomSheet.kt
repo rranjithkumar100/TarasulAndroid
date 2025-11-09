@@ -2,14 +2,13 @@ package com.tcc.tarasulandroid.feature.chat
 
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
+import com.tcc.tarasulandroid.R
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -37,7 +36,7 @@ fun MediaPickerBottomSheet(
             )
             
             MediaOption(
-                icon = Icons.Default.CameraAlt,
+                iconRes = R.drawable.ic_camera,
                 label = "Camera",
                 onClick = {
                     onCameraClick()
@@ -46,7 +45,7 @@ fun MediaPickerBottomSheet(
             )
             
             MediaOption(
-                icon = Icons.Default.PhotoLibrary,
+                iconRes = R.drawable.ic_gallery,
                 label = "Gallery",
                 onClick = {
                     onGalleryClick()
@@ -55,7 +54,7 @@ fun MediaPickerBottomSheet(
             )
             
             MediaOption(
-                icon = Icons.Default.Videocam,
+                iconRes = R.drawable.ic_video,
                 label = "Video",
                 onClick = {
                     onVideoClick()
@@ -64,7 +63,7 @@ fun MediaPickerBottomSheet(
             )
             
             MediaOption(
-                icon = Icons.Default.InsertDriveFile,
+                iconRes = R.drawable.ic_file,
                 label = "Document",
                 onClick = {
                     onFileClick()
@@ -73,7 +72,7 @@ fun MediaPickerBottomSheet(
             )
             
             MediaOption(
-                icon = Icons.Default.ContactPage,
+                iconRes = R.drawable.ic_contact,
                 label = "Contact",
                 onClick = {
                     onContactClick()
@@ -86,7 +85,7 @@ fun MediaPickerBottomSheet(
 
 @Composable
 private fun MediaOption(
-    icon: ImageVector,
+    iconRes: Int,
     label: String,
     onClick: () -> Unit
 ) {
@@ -98,7 +97,7 @@ private fun MediaOption(
         verticalAlignment = Alignment.CenterVertically
     ) {
         Icon(
-            imageVector = icon,
+            painter = painterResource(id = iconRes),
             contentDescription = label,
             modifier = Modifier.size(24.dp),
             tint = MaterialTheme.colorScheme.primary

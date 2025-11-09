@@ -9,8 +9,10 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
 import coil.compose.AsyncImage
+import com.tcc.tarasulandroid.R
 import com.tcc.tarasulandroid.data.MessageWithMedia
 import com.tcc.tarasulandroid.data.db.DownloadStatus
 import com.tcc.tarasulandroid.data.db.MessageType
@@ -214,7 +216,7 @@ private fun FileMessageContent(
         verticalAlignment = Alignment.CenterVertically
     ) {
         Icon(
-            imageVector = androidx.compose.material.icons.Icons.Default.InsertDriveFile,
+            painter = painterResource(id = R.drawable.ic_file),
             contentDescription = "File",
             modifier = Modifier.size(40.dp)
         )
@@ -251,7 +253,7 @@ private fun ContactMessageContent(message: com.tcc.tarasulandroid.data.db.Messag
         verticalAlignment = Alignment.CenterVertically
     ) {
         Icon(
-            imageVector = androidx.compose.material.icons.Icons.Default.Person,
+            painter = painterResource(id = R.drawable.ic_person),
             contentDescription = "Contact",
             modifier = Modifier.size(40.dp)
         )
@@ -279,7 +281,7 @@ private fun AudioMessageContent(
         verticalAlignment = Alignment.CenterVertically
     ) {
         Icon(
-            imageVector = androidx.compose.material.icons.Icons.Default.AudioFile,
+            painter = painterResource(id = R.drawable.ic_audio),
             contentDescription = "Audio",
             modifier = Modifier.size(40.dp)
         )

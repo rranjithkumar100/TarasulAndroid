@@ -1,5 +1,7 @@
 package com.tcc.tarasulandroid.feature.chat
 
+import android.net.Uri
+import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -16,6 +18,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -24,6 +27,8 @@ import androidx.compose.foundation.layout.ime
 import androidx.compose.foundation.layout.safeDrawing
 import androidx.compose.foundation.layout.windowInsetsPadding
 import com.tcc.tarasulandroid.R
+import com.tcc.tarasulandroid.core.*
+import com.tcc.tarasulandroid.data.db.MessageType
 import com.tcc.tarasulandroid.feature.home.model.Contact
 import com.tcc.tarasulandroid.feature.home.model.Message
 import kotlinx.coroutines.launch
@@ -38,6 +43,8 @@ fun ChatScreen(
 ) {
     val context = LocalContext.current
     var messageText by remember { mutableStateOf("") }
+    var showMediaPicker by remember { mutableStateOf(false) }
+    var cameraImageUri by remember { mutableStateOf<Uri?>(null) }
     val coroutineScope = rememberCoroutineScope()
 
     // DI
@@ -83,6 +90,124 @@ fun ChatScreen(
     LaunchedEffect(messages.size) {
         if (messages.isNotEmpty()) {
             listState.animateScrollToItem(messages.size - 1)
+        }
+    }
+    
+    // Permission states
+    val cameraPermissionState = rememberMultiplePermissionsState(
+        permissions = MediaPermissions.getCameraPermissions()
+    )
+    
+    val mediaPermissionsState = rememberMultiplePermissionsState(
+        permissions = MediaPermissions.getMediaPermissions()
+    )
+    
+    val contactsPermissionState = rememberMultiplePermissionsState(
+        permissions = MediaPermissions.getContactsPermissions()
+    )
+    
+    // Media picker launchers
+    val imagePickerLauncher = rememberLauncherForActivityResult(
+        contract = PickImageContract()
+    ) { uri ->
+        uri?.let { 
+            coroutineScope.launch {
+                try {
+                    messagesRepository.sendMediaMessage(
+                        conversationId = conversationId ?: return@launch,
+                        recipientId = contact.id,
+                        mediaType = MessageType.IMAGE,
+                        mediaUri = it,
+                        mimeType = context.contentResolver.getType(it),
+                        fileName = MediaPickerHelper.getFileName(context, it)
+                    )
+                } catch (e: Exception) {
+                    // Handle error
+                }
+            }
+        }
+    }
+    
+    val videoPickerLauncher = rememberLauncherForActivityResult(
+        contract = PickVideoContract()
+    ) { uri ->
+        uri?.let { 
+            coroutineScope.launch {
+                try {
+                    messagesRepository.sendMediaMessage(
+                        conversationId = conversationId ?: return@launch,
+                        recipientId = contact.id,
+                        mediaType = MessageType.VIDEO,
+                        mediaUri = it,
+                        mimeType = context.contentResolver.getType(it),
+                        fileName = MediaPickerHelper.getFileName(context, it)
+                    )
+                } catch (e: Exception) {
+                    // Handle error
+                }
+            }
+        }
+    }
+    
+    val filePickerLauncher = rememberLauncherForActivityResult(
+        contract = PickFileContract()
+    ) { uri ->
+        uri?.let { 
+            coroutineScope.launch {
+                try {
+                    messagesRepository.sendMediaMessage(
+                        conversationId = conversationId ?: return@launch,
+                        recipientId = contact.id,
+                        mediaType = MessageType.FILE,
+                        mediaUri = it,
+                        mimeType = context.contentResolver.getType(it),
+                        fileName = MediaPickerHelper.getFileName(context, it)
+                    )
+                } catch (e: Exception) {
+                    // Handle error
+                }
+            }
+        }
+    }
+    
+    val cameraLauncher = rememberLauncherForActivityResult(
+        contract = TakePhotoContract()
+    ) { _ ->
+        cameraImageUri?.let { uri ->
+            coroutineScope.launch {
+                try {
+                    messagesRepository.sendMediaMessage(
+                        conversationId = conversationId ?: return@launch,
+                        recipientId = contact.id,
+                        mediaType = MessageType.IMAGE,
+                        mediaUri = uri,
+                        mimeType = "image/jpeg",
+                        fileName = "camera_${System.currentTimeMillis()}.jpg"
+                    )
+                } catch (e: Exception) {
+                    // Handle error
+                }
+            }
+        }
+    }
+    
+    val contactPickerLauncher = rememberLauncherForActivityResult(
+        contract = PickContactContract()
+    ) { uri ->
+        uri?.let {
+            // Handle contact selection
+            // You'd typically query the Contacts Provider here
+            coroutineScope.launch {
+                try {
+                    messagesRepository.sendMessage(
+                        conversationId = conversationId ?: return@launch,
+                        content = "Shared a contact",
+                        recipientId = contact.id
+                    )
+                } catch (e: Exception) {
+                    // Handle error
+                }
+            }
         }
     }
 
@@ -166,6 +291,17 @@ fun ChatScreen(
                         .padding(horizontal = 8.dp, vertical = 8.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
+                    // Attachment button
+                    IconButton(
+                        onClick = { showMediaPicker = true }
+                    ) {
+                        Icon(
+                            painter = painterResource(id = R.drawable.ic_attach),
+                            contentDescription = "Attach media",
+                            tint = MaterialTheme.colorScheme.primary
+                        )
+                    }
+                    
                     TextField(
                         value = messageText,
                         onValueChange = { messageText = it },
@@ -231,6 +367,45 @@ fun ChatScreen(
                 }
             }
         }
+    }
+    
+    // Media picker bottom sheet
+    if (showMediaPicker) {
+        MediaPickerBottomSheet(
+            onDismiss = { showMediaPicker = false },
+            onCameraClick = {
+                if (cameraPermissionState.allPermissionsGranted) {
+                    cameraImageUri = MediaPickerHelper.createTempImageUri(context)
+                    cameraImageUri?.let { cameraLauncher.launch(it) }
+                } else {
+                    cameraPermissionState.requestPermissions()
+                }
+            },
+            onGalleryClick = {
+                if (mediaPermissionsState.allPermissionsGranted) {
+                    imagePickerLauncher.launch(Unit)
+                } else {
+                    mediaPermissionsState.requestPermissions()
+                }
+            },
+            onVideoClick = {
+                if (mediaPermissionsState.allPermissionsGranted) {
+                    videoPickerLauncher.launch(Unit)
+                } else {
+                    mediaPermissionsState.requestPermissions()
+                }
+            },
+            onFileClick = {
+                filePickerLauncher.launch("*/*")
+            },
+            onContactClick = {
+                if (contactsPermissionState.allPermissionsGranted) {
+                    contactPickerLauncher.launch(Unit)
+                } else {
+                    contactsPermissionState.requestPermissions()
+                }
+            }
+        )
     }
 }
 
