@@ -69,8 +69,8 @@ fun MessageBubble(
                     else -> {}
                 }
                 
-                // Text content or caption
-                if (message.content.isNotBlank()) {
+                // Text content or caption (but NOT for CONTACT type - it's JSON)
+                if (message.content.isNotBlank() && message.type != MessageType.CONTACT) {
                     Text(
                         text = message.content,
                         style = MaterialTheme.typography.bodyMedium,

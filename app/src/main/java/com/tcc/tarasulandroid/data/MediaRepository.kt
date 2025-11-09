@@ -47,17 +47,21 @@ class MediaRepository @Inject constructor(
         mimeType: String?,
         fileName: String?
     ): MediaEntity = withContext(Dispatchers.IO) {
+        Log.d(TAG, "saveOutgoingMedia - uri: $uri, mimeType: $mimeType, fileName: $fileName")
         val mediaId = UUID.randomUUID().toString()
         
         // Copy file to internal storage
         val extension = fileName?.substringAfterLast('.', "") ?: getExtensionFromMimeType(mimeType)
         val targetFile = File(mediaDir, "$mediaId.$extension")
         
+        Log.d(TAG, "Copying file to: ${targetFile.absolutePath}")
         context.contentResolver.openInputStream(uri)?.use { input ->
             FileOutputStream(targetFile).use { output ->
                 input.copyTo(output)
             }
         }
+        
+        Log.d(TAG, "File copied successfully, size: ${targetFile.length()} bytes")
         
         // Calculate file metadata
         val fileSize = targetFile.length()
@@ -82,6 +86,7 @@ class MediaRepository @Inject constructor(
             downloadedAt = System.currentTimeMillis()
         )
         
+        Log.d(TAG, "Inserting media into database: $mediaId")
         mediaDao.insertMedia(media)
         Log.d(TAG, "Saved outgoing media: $mediaId at ${targetFile.absolutePath}")
         

@@ -99,6 +99,7 @@ fun ChatScreen(
         uri?.let { 
             coroutineScope.launch {
                 try {
+                    android.util.Log.d("ChatScreen", "Sending image: $it")
                     messagesRepository.sendMediaMessage(
                         conversationId = conversationId ?: return@launch,
                         recipientId = contact.id,
@@ -107,8 +108,9 @@ fun ChatScreen(
                         mimeType = context.contentResolver.getType(it),
                         fileName = MediaPickerHelper.getFileName(context, it)
                     )
+                    android.util.Log.d("ChatScreen", "Image sent successfully")
                 } catch (e: Exception) {
-                    // Handle error
+                    android.util.Log.e("ChatScreen", "Error sending image", e)
                 }
             }
         }
@@ -120,6 +122,7 @@ fun ChatScreen(
         uri?.let { 
             coroutineScope.launch {
                 try {
+                    android.util.Log.d("ChatScreen", "Sending video: $it")
                     messagesRepository.sendMediaMessage(
                         conversationId = conversationId ?: return@launch,
                         recipientId = contact.id,
@@ -128,8 +131,9 @@ fun ChatScreen(
                         mimeType = context.contentResolver.getType(it),
                         fileName = MediaPickerHelper.getFileName(context, it)
                     )
+                    android.util.Log.d("ChatScreen", "Video sent successfully")
                 } catch (e: Exception) {
-                    // Handle error
+                    android.util.Log.e("ChatScreen", "Error sending video", e)
                 }
             }
         }
