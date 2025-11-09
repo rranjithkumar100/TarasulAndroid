@@ -196,20 +196,17 @@ fun ChatScreen(
             )
         },
         bottomBar = {
-            Column {
-                HorizontalDivider()
-                Surface(
-                    shadowElevation = 8.dp,
-                    color = MaterialTheme.colorScheme.surface
+            Surface(
+                shadowElevation = 8.dp,
+                color = MaterialTheme.colorScheme.surface
+            ) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(8.dp)
+                        .navigationBarsPadding(), // Only navigation bar padding
+                    verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(8.dp)
-                            .navigationBarsPadding() // Add navigation bar padding directly to Row
-                            .imePadding(), // Add keyboard padding to prevent gap
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
                     TextField(
                         value = messageText,
                         onValueChange = { messageText = it },
@@ -261,22 +258,26 @@ fun ChatScreen(
                     }
                 }
             }
-            }
         }
     ) { padding ->
-        LazyColumn(
+        Box(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(padding)
-                .padding(horizontal = 16.dp)
-                .imePadding(), // Add IME padding to messages list only
-            state = listState,
-            reverseLayout = false,
-            contentPadding = PaddingValues(bottom = 8.dp) // Add bottom padding for last message
+                .imePadding() // Keyboard padding for content area
         ) {
-            items(messages) { message ->
-                MessageBubble(message = message)
-                Spacer(modifier = Modifier.height(8.dp))
+            LazyColumn(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(horizontal = 16.dp),
+                state = listState,
+                reverseLayout = false,
+                contentPadding = PaddingValues(bottom = 8.dp)
+            ) {
+                items(messages) { message ->
+                    MessageBubble(message = message)
+                    Spacer(modifier = Modifier.height(8.dp))
+                }
             }
         }
     }
