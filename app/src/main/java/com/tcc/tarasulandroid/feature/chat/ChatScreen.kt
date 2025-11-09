@@ -76,7 +76,9 @@ fun ChatScreen(
     val listState = rememberLazyListState()
 
     Scaffold(
-        modifier = Modifier.fillMaxSize(),
+        modifier = Modifier
+            .fillMaxSize()
+            .imePadding(), // Add keyboard padding at Scaffold level
         topBar = {
             TopAppBar(
                 title = {
@@ -146,8 +148,7 @@ fun ChatScreen(
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(8.dp)
-                        .imePadding(), // Add keyboard padding to the input row
+                        .padding(8.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     TextField(
@@ -196,8 +197,7 @@ fun ChatScreen(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(padding)
-                .padding(horizontal = 16.dp)
-                .imePadding(), // Add keyboard padding to messages list
+                .padding(horizontal = 16.dp),
             state = listState,
             reverseLayout = false,
             contentPadding = PaddingValues(bottom = 8.dp) // Add bottom padding for last message
