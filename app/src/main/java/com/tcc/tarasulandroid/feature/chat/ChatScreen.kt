@@ -79,17 +79,54 @@ fun ChatScreen(
         }
     }
     
+    // Track what was clicked (to relaunch after permission granted)
+    var pendingMediaAction by remember { mutableStateOf<String?>(null) }
+    
     // Permission states
     val cameraPermissionState = rememberMultiplePermissionsState(
-        permissions = MediaPermissions.getCameraPermissions()
+        permissions = MediaPermissions.getCameraPermissions(),
+        onPermissionsResult = { results ->
+            android.util.Log.d("ChatScreen", "Camera permission result: $results")
+            if (results.values.all { it } && pendingMediaAction == "camera") {
+                android.util.Log.d("ChatScreen", "Permission granted, launching camera")
+                cameraImageUri = MediaPickerHelper.createTempImageUri(context)
+                cameraImageUri?.let { cameraLauncher.launch(it) }
+                pendingMediaAction = null
+            }
+        }
     )
     
     val mediaPermissionsState = rememberMultiplePermissionsState(
-        permissions = MediaPermissions.getMediaPermissions()
+        permissions = MediaPermissions.getMediaPermissions(),
+        onPermissionsResult = { results ->
+            android.util.Log.d("ChatScreen", "Media permission result: $results")
+            if (results.values.all { it }) {
+                android.util.Log.d("ChatScreen", "Permission granted for: $pendingMediaAction")
+                when (pendingMediaAction) {
+                    "gallery" -> {
+                        android.util.Log.d("ChatScreen", "Launching image picker after permission")
+                        imagePickerLauncher.launch(Unit)
+                    }
+                    "video" -> {
+                        android.util.Log.d("ChatScreen", "Launching video picker after permission")
+                        videoPickerLauncher.launch(Unit)
+                    }
+                }
+                pendingMediaAction = null
+            }
+        }
     )
     
     val contactsPermissionState = rememberMultiplePermissionsState(
-        permissions = MediaPermissions.getContactsPermissions()
+        permissions = MediaPermissions.getContactsPermissions(),
+        onPermissionsResult = { results ->
+            android.util.Log.d("ChatScreen", "Contacts permission result: $results")
+            if (results.values.all { it } && pendingMediaAction == "contact") {
+                android.util.Log.d("ChatScreen", "Permission granted, launching contact picker")
+                contactPickerLauncher.launch(Unit)
+                pendingMediaAction = null
+            }
+        }
     )
     
     // Media picker launchers
@@ -431,10 +468,14 @@ fun ChatScreen(
         MediaPickerBottomSheet(
             onDismiss = { showMediaPicker = false },
             onCameraClick = {
+                android.util.Log.d("ChatScreen", "Camera clicked")
                 if (cameraPermissionState.allPermissionsGranted) {
+                    android.util.Log.d("ChatScreen", "Launching camera")
                     cameraImageUri = MediaPickerHelper.createTempImageUri(context)
                     cameraImageUri?.let { cameraLauncher.launch(it) }
                 } else {
+                    android.util.Log.d("ChatScreen", "Requesting camera permission")
+                    pendingMediaAction = "camera"
                     cameraPermissionState.requestPermissions()
                 }
             },
@@ -447,6 +488,7 @@ fun ChatScreen(
                     imagePickerLauncher.launch(Unit)
                 } else {
                     android.util.Log.d("ChatScreen", "Requesting media permissions")
+                    pendingMediaAction = "gallery"
                     mediaPermissionsState.requestPermissions()
                 }
             },
@@ -459,6 +501,7 @@ fun ChatScreen(
                     videoPickerLauncher.launch(Unit)
                 } else {
                     android.util.Log.d("ChatScreen", "Requesting media permissions")
+                    pendingMediaAction = "video"
                     mediaPermissionsState.requestPermissions()
                 }
             },
@@ -466,14 +509,18 @@ fun ChatScreen(
                 filePickerLauncher.launch("*/*")
             },
             onContactClick = {
+                android.util.Log.d("ChatScreen", "Contact clicked")
                 // Dismiss bottom sheet first
                 showMediaPicker = false
                 // Launch contact picker after a short delay to avoid TextField issues
                 coroutineScope.launch {
                     kotlinx.coroutines.delay(100)
                     if (contactsPermissionState.allPermissionsGranted) {
+                        android.util.Log.d("ChatScreen", "Launching contact picker")
                         contactPickerLauncher.launch(Unit)
                     } else {
+                        android.util.Log.d("ChatScreen", "Requesting contacts permission")
+                        pendingMediaAction = "contact"
                         contactsPermissionState.requestPermissions()
                     }
                 }
