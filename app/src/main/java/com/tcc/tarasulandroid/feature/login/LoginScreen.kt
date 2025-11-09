@@ -24,8 +24,10 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavController
+import androidx.navigation.compose.rememberNavController
 import com.tcc.tarasulandroid.R
 import com.tcc.tarasulandroid.data.LanguageManager
 import com.tcc.tarasulandroid.di.LanguageManagerEntryPoint
@@ -317,5 +319,255 @@ fun LoginScreen(
                 }
             }
         )
+    }
+}
+
+@Preview(showBackground = true, showSystemUi = true)
+@Composable
+private fun LoginScreenPreview() {
+    MaterialTheme {
+        LoginScreenContent(
+            email = "test@example.com",
+            password = "password",
+            passwordVisible = false,
+            isLoading = false,
+            errorMessage = null,
+            currentLanguage = "en",
+            onEmailChange = {},
+            onPasswordChange = {},
+            onPasswordVisibilityToggle = {},
+            onLoginClick = {},
+            onForgotPasswordClick = {},
+            onSignUpClick = {},
+            onLanguageClick = {},
+            onErrorDismiss = {}
+        )
+    }
+}
+
+@Composable
+private fun LoginScreenContent(
+    email: String,
+    password: String,
+    passwordVisible: Boolean,
+    isLoading: Boolean,
+    errorMessage: String?,
+    currentLanguage: String,
+    onEmailChange: (String) -> Unit,
+    onPasswordChange: (String) -> Unit,
+    onPasswordVisibilityToggle: () -> Unit,
+    onLoginClick: () -> Unit,
+    onForgotPasswordClick: () -> Unit,
+    onSignUpClick: () -> Unit,
+    onLanguageClick: () -> Unit,
+    onErrorDismiss: () -> Unit
+) {
+    val focusManager = LocalFocusManager.current
+    val scrollState = rememberScrollState()
+
+    Box(
+        modifier = Modifier.fillMaxSize()
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .verticalScroll(scrollState)
+                .padding(24.dp),
+            verticalArrangement = Arrangement.Center,
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            // Language Switcher Button
+            OutlinedButton(
+                onClick = onLanguageClick,
+                modifier = Modifier.align(Alignment.End)
+            ) {
+                Icon(
+                    painter = painterResource(id = R.drawable.ic_translate),
+                    contentDescription = stringResource(R.string.language)
+                )
+                Spacer(modifier = Modifier.width(8.dp))
+                Text(
+                    if (currentLanguage == "en")
+                        stringResource(R.string.english)
+                    else
+                        stringResource(R.string.arabic)
+                )
+            }
+
+            Spacer(modifier = Modifier.height(24.dp))
+
+            // App Logo/Title
+            Text(
+                text = stringResource(R.string.welcome_back),
+                style = MaterialTheme.typography.displaySmall,
+                fontWeight = FontWeight.Bold,
+                color = MaterialTheme.colorScheme.primary
+            )
+            
+            Spacer(modifier = Modifier.height(8.dp))
+            
+            Text(
+                text = stringResource(R.string.sign_in_to_continue),
+                style = MaterialTheme.typography.bodyLarge,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+            
+            Spacer(modifier = Modifier.height(48.dp))
+            
+            // Email Field
+            OutlinedTextField(
+                value = email,
+                onValueChange = onEmailChange,
+                modifier = Modifier.fillMaxWidth(),
+                label = { Text(stringResource(R.string.email)) },
+                placeholder = { Text(stringResource(R.string.enter_email)) },
+                leadingIcon = {
+                    Icon(
+                        imageVector = Icons.Default.Email,
+                        contentDescription = stringResource(R.string.email)
+                    )
+                },
+                keyboardOptions = KeyboardOptions(
+                    keyboardType = KeyboardType.Email,
+                    imeAction = ImeAction.Next
+                ),
+                keyboardActions = KeyboardActions(
+                    onNext = { focusManager.moveFocus(FocusDirection.Down) }
+                ),
+                singleLine = true,
+                enabled = !isLoading,
+                colors = OutlinedTextFieldDefaults.colors(
+                    focusedBorderColor = MaterialTheme.colorScheme.primary,
+                    unfocusedBorderColor = MaterialTheme.colorScheme.outline
+                )
+            )
+            
+            Spacer(modifier = Modifier.height(16.dp))
+            
+            // Password Field
+            OutlinedTextField(
+                value = password,
+                onValueChange = onPasswordChange,
+                modifier = Modifier.fillMaxWidth(),
+                label = { Text(stringResource(R.string.password)) },
+                placeholder = { Text(stringResource(R.string.enter_password)) },
+                leadingIcon = {
+                    Icon(
+                        imageVector = Icons.Default.Lock,
+                        contentDescription = stringResource(R.string.password)
+                    )
+                },
+                trailingIcon = {
+                    IconButton(onClick = onPasswordVisibilityToggle) {
+                        Text(
+                            text = if (passwordVisible) "👁️" else "👁️‍🗨️",
+                            style = MaterialTheme.typography.titleLarge
+                        )
+                    }
+                },
+                visualTransformation = if (passwordVisible) 
+                    VisualTransformation.None 
+                else 
+                    PasswordVisualTransformation(),
+                keyboardOptions = KeyboardOptions(
+                    keyboardType = KeyboardType.Password,
+                    imeAction = ImeAction.Done
+                ),
+                keyboardActions = KeyboardActions(
+                    onDone = { 
+                        focusManager.clearFocus()
+                        if (email.isNotBlank() && password.isNotBlank()) {
+                            onLoginClick()
+                        }
+                    }
+                ),
+                singleLine = true,
+                enabled = !isLoading,
+                colors = OutlinedTextFieldDefaults.colors(
+                    focusedBorderColor = MaterialTheme.colorScheme.primary,
+                    unfocusedBorderColor = MaterialTheme.colorScheme.outline
+                )
+            )
+            
+            Spacer(modifier = Modifier.height(8.dp))
+            
+            // Forgot Password
+            TextButton(
+                onClick = onForgotPasswordClick,
+                modifier = Modifier.align(Alignment.End),
+                enabled = !isLoading
+            ) {
+                Text(
+                    text = stringResource(R.string.forgot_password),
+                    color = MaterialTheme.colorScheme.primary
+                )
+            }
+            
+            Spacer(modifier = Modifier.height(24.dp))
+            
+            // Login Button
+            Button(
+                onClick = onLoginClick,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(56.dp),
+                enabled = email.isNotBlank() && password.isNotBlank() && !isLoading,
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = MaterialTheme.colorScheme.primary
+                )
+            ) {
+                if (isLoading) {
+                    CircularProgressIndicator(
+                        modifier = Modifier.size(24.dp),
+                        color = MaterialTheme.colorScheme.onPrimary
+                    )
+                } else {
+                    Text(
+                        text = stringResource(R.string.sign_in),
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.SemiBold
+                    )
+                }
+            }
+            
+            Spacer(modifier = Modifier.height(16.dp))
+            
+            // Sign Up
+            Row(
+                horizontalArrangement = Arrangement.Center,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = stringResource(R.string.dont_have_account),
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                TextButton(
+                    onClick = onSignUpClick,
+                    enabled = !isLoading
+                ) {
+                    Text(
+                        text = stringResource(R.string.sign_up),
+                        fontWeight = FontWeight.SemiBold
+                    )
+                }
+            }
+        }
+
+        // Error Snackbar
+        if (errorMessage != null) {
+            Snackbar(
+                modifier = Modifier
+                    .align(Alignment.BottomCenter)
+                    .padding(16.dp),
+                action = {
+                    TextButton(onClick = onErrorDismiss) {
+                        Text(stringResource(R.string.ok))
+                    }
+                }
+            ) {
+                Text(errorMessage)
+            }
+        }
     }
 }
