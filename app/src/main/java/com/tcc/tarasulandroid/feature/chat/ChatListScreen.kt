@@ -15,9 +15,12 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import com.tcc.tarasulandroid.R
 import com.tcc.tarasulandroid.feature.home.model.Contact
 import java.text.SimpleDateFormat
 import java.util.*
@@ -36,7 +39,7 @@ fun ChatListScreen(
             TopAppBar(
                 title = { 
                     Text(
-                        "Messages",
+                        stringResource(R.string.messages),
                         style = MaterialTheme.typography.headlineMedium,
                         fontWeight = FontWeight.Bold
                     ) 
@@ -51,7 +54,7 @@ fun ChatListScreen(
                 onClick = { /* TODO: Handle new message */ },
                 containerColor = MaterialTheme.colorScheme.primary
             ) {
-                Icon(Icons.Default.Add, contentDescription = "New Message")
+                Icon(Icons.Default.Add, contentDescription = stringResource(R.string.new_message))
             }
         }
     ) { padding ->
@@ -179,12 +182,14 @@ private fun ContactItem(
     }
 }
 
+@Composable
 private fun formatTime(timestamp: Long): String {
+    val context = LocalContext.current
     val now = System.currentTimeMillis()
     val diff = now - timestamp
     
     return when {
-        diff < 60000 -> "Just now"
+        diff < 60000 -> context.getString(R.string.just_now)
         diff < 3600000 -> "${diff / 60000}m"
         diff < 86400000 -> "${diff / 3600000}h"
         diff < 604800000 -> SimpleDateFormat("EEE", Locale.getDefault()).format(Date(timestamp))

@@ -9,16 +9,24 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import com.tcc.tarasulandroid.core.designsystem.theme.TarasulTheme
+import com.tcc.tarasulandroid.data.LanguageManager
 import com.tcc.tarasulandroid.ui.base.BaseActivity
 import com.tcc.tarasulandroid.viewmodels.MainViewModel
 import dagger.hilt.android.AndroidEntryPoint
+import javax.inject.Inject
 
 @AndroidEntryPoint
 class MainActivity : BaseActivity() {
 
     private val viewModel: MainViewModel by viewModels()
+    
+    @Inject
+    lateinit var languageManager: LanguageManager
 
     override fun onCreate(savedInstanceState: Bundle?) {
+        // Apply saved language before calling super.onCreate
+        languageManager.applyLanguage(languageManager.getCurrentLanguage())
+        
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
         setContent {

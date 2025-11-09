@@ -1,15 +1,17 @@
 package com.tcc.tarasulandroid.feature.home.ui
 
-import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Call
+import androidx.compose.material.icons.filled.Chat
 import androidx.compose.material.icons.filled.Person
+import androidx.compose.material.icons.outlined.Chat
 import androidx.compose.material.icons.outlined.Person
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
+import com.tcc.tarasulandroid.R
 import com.tcc.tarasulandroid.feature.chat.ChatListScreen
 import com.tcc.tarasulandroid.feature.home.ui.profile.ProfileScreen
 
@@ -20,8 +22,8 @@ fun HomeScreen(
     var selectedTab by remember { mutableStateOf(0) }
     
     val tabs = listOf(
-        BottomNavItem("Chats", Icons.Filled.Call, Icons.Filled.Call),
-        BottomNavItem("Profile", Icons.Outlined.Person, Icons.Filled.Person)
+        BottomNavItem(stringResource(R.string.chats), Icons.Outlined.Chat, Icons.Filled.Chat),
+        BottomNavItem(stringResource(R.string.profile), Icons.Outlined.Person, Icons.Filled.Person)
     )
 
     Scaffold(

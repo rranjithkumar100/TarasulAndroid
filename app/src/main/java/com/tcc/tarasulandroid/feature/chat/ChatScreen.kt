@@ -15,8 +15,10 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import com.tcc.tarasulandroid.R
 import com.tcc.tarasulandroid.feature.home.model.Contact
 import com.tcc.tarasulandroid.feature.home.model.Message
 import java.text.SimpleDateFormat
@@ -111,7 +113,10 @@ fun ChatScreen(
                                 fontWeight = FontWeight.SemiBold
                             )
                             Text(
-                                text = if (contact.isOnline) "Online" else "Offline",
+                                text = if (contact.isOnline) 
+                                    stringResource(R.string.online) 
+                                else 
+                                    stringResource(R.string.offline),
                                 style = MaterialTheme.typography.bodySmall,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
@@ -146,7 +151,7 @@ fun ChatScreen(
                         value = messageText,
                         onValueChange = { messageText = it },
                         modifier = Modifier.weight(1f),
-                        placeholder = { Text("Type a message...") },
+                        placeholder = { Text(stringResource(R.string.type_message)) },
                         colors = TextFieldDefaults.colors(
                             focusedIndicatorColor = MaterialTheme.colorScheme.primary,
                             unfocusedIndicatorColor = MaterialTheme.colorScheme.outline,
@@ -176,7 +181,7 @@ fun ChatScreen(
                     ) {
                         Icon(
                             Icons.AutoMirrored.Filled.Send,
-                            contentDescription = "Send",
+                            contentDescription = stringResource(R.string.send),
                             tint = MaterialTheme.colorScheme.onPrimary
                         )
                     }

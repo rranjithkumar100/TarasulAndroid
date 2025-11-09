@@ -1,0 +1,89 @@
+<resources>
+    <string name="app_name">تراسل</string>
+    
+    <!-- Login Screen -->
+    <string name="welcome_back">مرحباً بعودتك</string>
+    <string name="sign_in_to_continue">سجل الدخول للمتابعة</string>
+    <string name="email">البريد الإلكتروني</string>
+    <string name="enter_email">أدخل بريدك الإلكتروني</string>
+    <string name="password">كلمة المرور</string>
+    <string name="enter_password">أدخل كلمة المرور</string>
+    <string name="forgot_password">هل نسيت كلمة المرور؟</string>
+    <string name="sign_in">تسجيل الدخول</string>
+    <string name="dont_have_account">ليس لديك حساب؟</string>
+    <string name="sign_up">إنشاء حساب</string>
+    <string name="hide_password">إخفاء كلمة المرور</string>
+    <string name="show_password">إظهار كلمة المرور</string>
+    <string name="language">اللغة</string>
+    <string name="english">English</string>
+    <string name="arabic">العربية</string>
+    
+    <!-- Login Errors -->
+    <string name="error_invalid_credentials">البريد الإلكتروني أو كلمة المرور غير صحيحة</string>
+    <string name="error_network">خطأ في الشبكة. يرجى المحاولة مرة أخرى.</string>
+    <string name="login_success">تم تسجيل الدخول بنجاح!</string>
+    
+    <!-- Home Screen -->
+    <string name="chats">المحادثات</string>
+    <string name="profile">الملف الشخصي</string>
+    
+    <!-- Chat List Screen -->
+    <string name="messages">الرسائل</string>
+    <string name="new_message">رسالة جديدة</string>
+    <string name="online">متصل</string>
+    <string name="offline">غير متصل</string>
+    <string name="just_now">الآن</string>
+    
+    <!-- Chat Screen -->
+    <string name="type_message">اكتب رسالة...</string>
+    <string name="send">إرسال</string>
+    
+    <!-- Profile Screen -->
+    <string name="appearance">المظهر</string>
+    <string name="dark_theme">الوضع الداكن</string>
+    <string name="dark_theme_desc">التبديل بين الوضع الفاتح والداكن</string>
+    <string name="account">الحساب</string>
+    <string name="edit_profile">تعديل الملف الشخصي</string>
+    <string name="edit_profile_desc">تغيير اسمك وصورتك</string>
+    <string name="privacy">الخصوصية</string>
+    <string name="privacy_desc">التحكم في إعدادات الخصوصية</string>
+    <string name="notifications">الإشعارات</string>
+    <string name="notifications_desc">إدارة تفضيلات الإشعارات</string>
+    <string name="more">المزيد</string>
+    <string name="help_support">المساعدة والدعم</string>
+    <string name="help_support_desc">احصل على المساعدة واتصل بنا</string>
+    <string name="about">حول</string>
+    <string name="about_desc">إصدار التطبيق والمعلومات</string>
+    <string name="logout">تسجيل الخروج</string>
+    <string name="language_settings">اللغة</string>
+    <string name="language_settings_desc">تغيير لغة التطبيق</string>
+    
+    <!-- Contact Names (Dummy) -->
+    <string name="contact_alice">أليس جونسون</string>
+    <string name="contact_bob">بوب سميث</string>
+    <string name="contact_charlie">تشارلي براون</string>
+    <string name="contact_diana">ديانا برنس</string>
+    <string name="contact_edward">إدوارد نورتون</string>
+    
+    <!-- Contact Messages (Dummy) -->
+    <string name="message_alice">مرحباً! كيف حالك؟</string>
+    <string name="message_bob">هل شاهدت آخر التحديثات؟</string>
+    <string name="message_charlie">شكراً على مساعدتك!</string>
+    <string name="message_diana">لنلتقِ غداً في الساعة 3 مساءً</string>
+    <string name="message_edward">عمل رائع في المشروع!</string>
+    
+    <!-- Chat Messages -->
+    <string name="chat_message_1">مرحباً! كيف حالك؟</string>
+    <string name="chat_message_2">مرحباً! أنا بخير، شكراً لسؤالك!</string>
+    <string name="chat_message_3">هذا رائع! هل تريد اللقاء لاحقاً؟</string>
+    <string name="chat_message_4">بالتأكيد! ما الوقت المناسب لك؟</string>
+    <string name="chat_message_5">ما رأيك في الساعة 5 مساءً؟</string>
+    
+    <!-- Common -->
+    <string name="back">رجوع</string>
+    <string name="loading">جاري التحميل...</string>
+    <string name="error">خطأ</string>
+    <string name="retry">إعادة المحاولة</string>
+    <string name="ok">حسناً</string>
+    <string name="cancel">إلغاء</string>
+</resources>

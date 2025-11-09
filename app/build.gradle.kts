@@ -91,6 +91,9 @@ dependencies {
     // Socket.IO
     implementation(libs.socket.io)
     
+    // Encrypted SharedPreferences
+    implementation("androidx.security:security-crypto:1.1.0-alpha06")
+    
     testImplementation(libs.junit)
     testImplementation(libs.mockwebserver)
     testImplementation(libs.kotlinx.coroutines.test)

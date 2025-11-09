@@ -1,5 +1,6 @@
 package com.tcc.tarasulandroid.feature.home.ui.profile
 
+import android.app.Activity
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
@@ -12,32 +13,39 @@ import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material.icons.filled.Language
 import androidx.compose.material3.*
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.collectAsState
-import androidx.compose.runtime.getValue
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
+import com.tcc.tarasulandroid.R
+import com.tcc.tarasulandroid.data.LanguageManager
 import com.tcc.tarasulandroid.viewmodels.MainViewModel
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ProfileScreen(
-    viewModel: MainViewModel = hiltViewModel()
+    viewModel: MainViewModel = hiltViewModel(),
+    languageManager: LanguageManager = hiltViewModel()
 ) {
     val isDarkTheme by viewModel.isDarkTheme.collectAsState()
     val scrollState = rememberScrollState()
+    var showLanguageDialog by remember { mutableStateOf(false) }
+    val context = LocalContext.current
+    val activity = context as? Activity
 
     Scaffold(
         topBar = {
             TopAppBar(
                 title = {
                     Text(
-                        "Profile",
+                        stringResource(R.string.profile),
                         style = MaterialTheme.typography.headlineMedium,
                         fontWeight = FontWeight.Bold
                     )
@@ -102,7 +110,7 @@ fun ProfileScreen(
                     .padding(16.dp)
             ) {
                 Text(
-                    text = "Appearance",
+                    text = stringResource(R.string.appearance),
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.SemiBold,
                     color = MaterialTheme.colorScheme.primary,
@@ -111,8 +119,8 @@ fun ProfileScreen(
 
                 ProfileSettingItem(
                     icon = Icons.Default.Settings,
-                    title = "Dark Theme",
-                    subtitle = "Switch between light and dark mode",
+                    title = stringResource(R.string.dark_theme),
+                    subtitle = stringResource(R.string.dark_theme_desc),
                     trailing = {
                         Switch(
                             checked = isDarkTheme,
@@ -121,10 +129,17 @@ fun ProfileScreen(
                     }
                 )
 
+                ProfileSettingItem(
+                    icon = Icons.Default.Language,
+                    title = stringResource(R.string.language_settings),
+                    subtitle = stringResource(R.string.language_settings_desc),
+                    onClick = { showLanguageDialog = true }
+                )
+
                 HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
 
                 Text(
-                    text = "Account",
+                    text = stringResource(R.string.account),
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.SemiBold,
                     color = MaterialTheme.colorScheme.primary,
@@ -133,29 +148,29 @@ fun ProfileScreen(
 
                 ProfileSettingItem(
                     icon = Icons.Default.Person,
-                    title = "Edit Profile",
-                    subtitle = "Change your name and photo",
+                    title = stringResource(R.string.edit_profile),
+                    subtitle = stringResource(R.string.edit_profile_desc),
                     onClick = { /* TODO */ }
                 )
 
                 ProfileSettingItem(
                     icon = Icons.Default.Lock,
-                    title = "Privacy",
-                    subtitle = "Control your privacy settings",
+                    title = stringResource(R.string.privacy),
+                    subtitle = stringResource(R.string.privacy_desc),
                     onClick = { /* TODO */ }
                 )
 
                 ProfileSettingItem(
                     icon = Icons.Default.Notifications,
-                    title = "Notifications",
-                    subtitle = "Manage notification preferences",
+                    title = stringResource(R.string.notifications),
+                    subtitle = stringResource(R.string.notifications_desc),
                     onClick = { /* TODO */ }
                 )
 
                 HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
 
                 Text(
-                    text = "More",
+                    text = stringResource(R.string.more),
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.SemiBold,
                     color = MaterialTheme.colorScheme.primary,
@@ -164,15 +179,15 @@ fun ProfileScreen(
 
                 ProfileSettingItem(
                     icon = Icons.Default.Info,
-                    title = "Help & Support",
-                    subtitle = "Get help and contact us",
+                    title = stringResource(R.string.help_support),
+                    subtitle = stringResource(R.string.help_support_desc),
                     onClick = { /* TODO */ }
                 )
 
                 ProfileSettingItem(
                     icon = Icons.Default.Info,
-                    title = "About",
-                    subtitle = "App version and information",
+                    title = stringResource(R.string.about),
+                    subtitle = stringResource(R.string.about_desc),
                     onClick = { /* TODO */ }
                 )
 
@@ -188,10 +203,58 @@ fun ProfileScreen(
                         contentColor = MaterialTheme.colorScheme.onErrorContainer
                     )
                 ) {
-                    Text("Logout", fontWeight = FontWeight.Bold)
+                    Text(stringResource(R.string.logout), fontWeight = FontWeight.Bold)
                 }
             }
         }
+    }
+
+    // Language Dialog
+    if (showLanguageDialog) {
+        AlertDialog(
+            onDismissRequest = { showLanguageDialog = false },
+            title = { Text(stringResource(R.string.language)) },
+            text = {
+                Column {
+                    languageManager.getAvailableLanguages().forEach { lang ->
+                        val isSelected = languageManager.getCurrentLanguage() == lang.code
+                        Surface(
+                            modifier = Modifier.fillMaxWidth(),
+                            color = if (isSelected) 
+                                MaterialTheme.colorScheme.primaryContainer 
+                            else 
+                                MaterialTheme.colorScheme.surface,
+                            onClick = {
+                                languageManager.setLanguage(lang.code, activity)
+                                showLanguageDialog = false
+                            }
+                        ) {
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(16.dp),
+                                horizontalArrangement = Arrangement.Start,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Text(lang.flag, style = MaterialTheme.typography.headlineSmall)
+                                Spacer(modifier = Modifier.width(16.dp))
+                                Text(
+                                    text = lang.name,
+                                    style = MaterialTheme.typography.titleMedium,
+                                    fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal
+                                )
+                            }
+                        }
+                        Spacer(modifier = Modifier.height(8.dp))
+                    }
+                }
+            },
+            confirmButton = {
+                TextButton(onClick = { showLanguageDialog = false }) {
+                    Text(stringResource(R.string.cancel))
+                }
+            }
+        )
     }
 }
 
