@@ -32,18 +32,27 @@ import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavController
 import com.tcc.tarasulandroid.R
+import com.tcc.tarasulandroid.di.MessagesRepositoryEntryPoint
 import com.tcc.tarasulandroid.feature.contacts.model.DeviceContact
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ContactListScreen(
     navController: NavController,
-    viewModel: ContactsViewModel = hiltViewModel(),
-    messagesRepository: com.tcc.tarasulandroid.data.MessagesRepository = hiltViewModel()
+    viewModel: ContactsViewModel = hiltViewModel()
 ) {
     val context = LocalContext.current
     val uiState by viewModel.uiState.collectAsState()
     val searchQuery by viewModel.searchQuery.collectAsState()
+    
+    // Get MessagesRepository from application context via Hilt EntryPoint
+    val messagesRepository = remember {
+        val app = context.applicationContext as com.tcc.tarasulandroid.TarasulApplication
+        dagger.hilt.android.EntryPointAccessors.fromApplication(
+            app,
+            MessagesRepositoryEntryPoint::class.java
+        ).messagesRepository()
+    }
     
     // State for creating conversation
     var isCreatingConversation by remember { mutableStateOf(false) }
