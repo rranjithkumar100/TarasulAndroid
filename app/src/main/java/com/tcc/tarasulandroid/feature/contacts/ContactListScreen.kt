@@ -38,11 +38,15 @@ import com.tcc.tarasulandroid.feature.contacts.model.DeviceContact
 @Composable
 fun ContactListScreen(
     navController: NavController,
-    viewModel: ContactsViewModel = hiltViewModel()
+    viewModel: ContactsViewModel = hiltViewModel(),
+    messagesRepository: com.tcc.tarasulandroid.data.MessagesRepository = hiltViewModel()
 ) {
     val context = LocalContext.current
     val uiState by viewModel.uiState.collectAsState()
     val searchQuery by viewModel.searchQuery.collectAsState()
+    
+    // State for creating conversation
+    var isCreatingConversation by remember { mutableStateOf(false) }
     
     // Permission launcher
     val permissionLauncher = rememberLauncherForActivityResult(
@@ -74,7 +78,29 @@ fun ContactListScreen(
         onSearchQueryChange = { viewModel.onSearchQueryChange(it) },
         onSyncClick = { viewModel.syncContacts(forceFullSync = false) },
         onContactClick = { contact ->
-            // TODO: Navigate to chat with this contact or show options
+            // Create conversation and navigate to chat
+            isCreatingConversation = true
+            kotlinx.coroutines.GlobalScope.launch {
+                try {
+                    val conversation = messagesRepository.getOrCreateConversation(
+                        contactId = contact.id,
+                        contactName = contact.name,
+                        contactPhoneNumber = contact.phoneNumber
+                    )
+                    kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Main) {
+                        isCreatingConversation = false
+                        // Navigate to chat screen with conversation details
+                        navController.navigate("chat/${conversation.contactId}/${conversation.contactName}/false") {
+                            // Don't add to back stack if coming from contacts
+                            launchSingleTop = true
+                        }
+                    }
+                } catch (e: Exception) {
+                    kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Main) {
+                        isCreatingConversation = false
+                    }
+                }
+            }
         },
         onOpenSettingsClick = {
             val intent = Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS).apply {

@@ -25,4 +25,10 @@ object DatabaseModule {
     fun provideContactsDao(database: AppDatabase): ContactsDao {
         return database.contactsDao()
     }
+    
+    @Provides
+    @Singleton
+    fun provideMessagesDao(database: AppDatabase): com.tcc.tarasulandroid.data.db.MessagesDao {
+        return database.messagesDao()
+    }
 }

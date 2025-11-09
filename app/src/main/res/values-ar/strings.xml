@@ -33,6 +33,9 @@
     <string name="online">متصل</string>
     <string name="offline">غير متصل</string>
     <string name="just_now">الآن</string>
+    <string name="no_chats_yet">لا توجد محادثات بعد</string>
+    <string name="no_chats_message">ابدأ محادثة بالنقر على الزر أدناه لاختيار جهة اتصال</string>
+    <string name="start_new_chat">بدء محادثة جديدة</string>
     
     <!-- Chat Screen -->
     <string name="type_message">اكتب رسالة...</string>

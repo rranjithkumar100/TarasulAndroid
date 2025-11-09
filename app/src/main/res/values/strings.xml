@@ -33,6 +33,9 @@
     <string name="online">Online</string>
     <string name="offline">Offline</string>
     <string name="just_now">Just now</string>
+    <string name="no_chats_yet">No Chats Yet</string>
+    <string name="no_chats_message">Start a conversation by tapping the button below to select a contact</string>
+    <string name="start_new_chat">Start New Chat</string>
     
     <!-- Chat Screen -->
     <string name="type_message">Type a message...</string>
