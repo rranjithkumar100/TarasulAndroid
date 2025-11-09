@@ -84,49 +84,15 @@ fun ChatScreen(
     
     // Permission states
     val cameraPermissionState = rememberMultiplePermissionsState(
-        permissions = MediaPermissions.getCameraPermissions(),
-        onPermissionsResult = { results ->
-            android.util.Log.d("ChatScreen", "Camera permission result: $results")
-            if (results.values.all { it } && pendingMediaAction == "camera") {
-                android.util.Log.d("ChatScreen", "Permission granted, launching camera")
-                cameraImageUri = MediaPickerHelper.createTempImageUri(context)
-                cameraImageUri?.let { cameraLauncher.launch(it) }
-                pendingMediaAction = null
-            }
-        }
+        permissions = MediaPermissions.getCameraPermissions()
     )
     
     val mediaPermissionsState = rememberMultiplePermissionsState(
-        permissions = MediaPermissions.getMediaPermissions(),
-        onPermissionsResult = { results ->
-            android.util.Log.d("ChatScreen", "Media permission result: $results")
-            if (results.values.all { it }) {
-                android.util.Log.d("ChatScreen", "Permission granted for: $pendingMediaAction")
-                when (pendingMediaAction) {
-                    "gallery" -> {
-                        android.util.Log.d("ChatScreen", "Launching image picker after permission")
-                        imagePickerLauncher.launch(Unit)
-                    }
-                    "video" -> {
-                        android.util.Log.d("ChatScreen", "Launching video picker after permission")
-                        videoPickerLauncher.launch(Unit)
-                    }
-                }
-                pendingMediaAction = null
-            }
-        }
+        permissions = MediaPermissions.getMediaPermissions()
     )
     
     val contactsPermissionState = rememberMultiplePermissionsState(
-        permissions = MediaPermissions.getContactsPermissions(),
-        onPermissionsResult = { results ->
-            android.util.Log.d("ChatScreen", "Contacts permission result: $results")
-            if (results.values.all { it } && pendingMediaAction == "contact") {
-                android.util.Log.d("ChatScreen", "Permission granted, launching contact picker")
-                contactPickerLauncher.launch(Unit)
-                pendingMediaAction = null
-            }
-        }
+        permissions = MediaPermissions.getContactsPermissions()
     )
     
     // Media picker launchers
@@ -292,6 +258,48 @@ fun ChatScreen(
                     )
                 } catch (e: Exception) {
                     android.util.Log.e("ChatScreen", "Error sending contact", e)
+                }
+            }
+        }
+    }
+    
+    // Watch for permission grants and auto-launch pickers
+    LaunchedEffect(
+        cameraPermissionState.allPermissionsGranted,
+        mediaPermissionsState.allPermissionsGranted,
+        contactsPermissionState.allPermissionsGranted,
+        pendingMediaAction
+    ) {
+        android.util.Log.d("ChatScreen", "Permission state changed - Pending: $pendingMediaAction")
+        
+        when (pendingMediaAction) {
+            "camera" -> {
+                if (cameraPermissionState.allPermissionsGranted) {
+                    android.util.Log.d("ChatScreen", "Permission granted, launching camera")
+                    cameraImageUri = MediaPickerHelper.createTempImageUri(context)
+                    cameraImageUri?.let { cameraLauncher.launch(it) }
+                    pendingMediaAction = null
+                }
+            }
+            "gallery" -> {
+                if (mediaPermissionsState.allPermissionsGranted) {
+                    android.util.Log.d("ChatScreen", "Permission granted, launching image picker")
+                    imagePickerLauncher.launch(Unit)
+                    pendingMediaAction = null
+                }
+            }
+            "video" -> {
+                if (mediaPermissionsState.allPermissionsGranted) {
+                    android.util.Log.d("ChatScreen", "Permission granted, launching video picker")
+                    videoPickerLauncher.launch(Unit)
+                    pendingMediaAction = null
+                }
+            }
+            "contact" -> {
+                if (contactsPermissionState.allPermissionsGranted) {
+                    android.util.Log.d("ChatScreen", "Permission granted, launching contact picker")
+                    contactPickerLauncher.launch(Unit)
+                    pendingMediaAction = null
                 }
             }
         }
