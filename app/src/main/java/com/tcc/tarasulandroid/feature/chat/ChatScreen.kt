@@ -218,17 +218,29 @@ fun ChatScreen(
     // Track what was clicked (to relaunch after permission granted)
     var pendingMediaAction by remember { mutableStateOf<String?>(null) }
     
-    // Permission states
+    // Permission states with callbacks to force re-check
     val cameraPermissionState = rememberMultiplePermissionsState(
-        permissions = MediaPermissions.getCameraPermissions()
+        permissions = MediaPermissions.getCameraPermissions(),
+        onPermissionsResult = { results ->
+            android.util.Log.d("ChatScreen", "Camera permission result: $results")
+        }
     )
 
     val mediaPermissionsState = rememberMultiplePermissionsState(
-        permissions = MediaPermissions.getMediaPermissions()
+        permissions = MediaPermissions.getMediaPermissions(),
+        onPermissionsResult = { results ->
+            android.util.Log.d("ChatScreen", "Media permission result: $results")
+            results.forEach { (permission, granted) ->
+                android.util.Log.d("ChatScreen", "  $permission: $granted")
+            }
+        }
     )
 
     val contactsPermissionState = rememberMultiplePermissionsState(
-        permissions = MediaPermissions.getContactsPermissions()
+        permissions = MediaPermissions.getContactsPermissions(),
+        onPermissionsResult = { results ->
+            android.util.Log.d("ChatScreen", "Contacts permission result: $results")
+        }
     )
 
     // Media picker launchers
@@ -709,40 +721,46 @@ fun ChatScreen(
             },
             onGalleryClick = {
                 android.util.Log.d("ChatScreen", "Gallery clicked")
-                android.util.Log.d("ChatScreen", "Media permissions granted: ${mediaPermissionsState.allPermissionsGranted}")
+                android.util.Log.d("ChatScreen", "Android SDK: ${android.os.Build.VERSION.SDK_INT}")
                 
-                // Log individual permission states for debugging
-                mediaPermissionsState.permissionsStatus.forEach { (permission, granted) ->
-                    android.util.Log.d("ChatScreen", "  - $permission: $granted")
-                }
-
-                if (mediaPermissionsState.allPermissionsGranted) {
-                    android.util.Log.d("ChatScreen", "Launching image picker")
+                // Android 13+ (API 33+): Modern photo picker doesn't need permissions
+                if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.TIRAMISU) {
+                    android.util.Log.d("ChatScreen", "Using modern photo picker (no permissions needed)")
                     imagePickerLauncher.launch(Unit)
                 } else {
-                    android.util.Log.d("ChatScreen", "Requesting media permissions")
-                    android.util.Log.d("ChatScreen", "Permissions to request: ${MediaPermissions.getMediaPermissions()}")
-                    pendingMediaAction = "gallery"
-                    mediaPermissionsState.requestPermissions()
+                    // Older Android: Check permissions first
+                    android.util.Log.d("ChatScreen", "Media permissions granted: ${mediaPermissionsState.allPermissionsGranted}")
+                    
+                    if (mediaPermissionsState.allPermissionsGranted) {
+                        android.util.Log.d("ChatScreen", "Launching image picker")
+                        imagePickerLauncher.launch(Unit)
+                    } else {
+                        android.util.Log.d("ChatScreen", "Requesting media permissions")
+                        pendingMediaAction = "gallery"
+                        mediaPermissionsState.requestPermissions()
+                    }
                 }
             },
             onVideoClick = {
                 android.util.Log.d("ChatScreen", "Video clicked")
-                android.util.Log.d("ChatScreen", "Media permissions granted: ${mediaPermissionsState.allPermissionsGranted}")
+                android.util.Log.d("ChatScreen", "Android SDK: ${android.os.Build.VERSION.SDK_INT}")
                 
-                // Log individual permission states for debugging
-                mediaPermissionsState.permissionsStatus.forEach { (permission, granted) ->
-                    android.util.Log.d("ChatScreen", "  - $permission: $granted")
-                }
-
-                if (mediaPermissionsState.allPermissionsGranted) {
-                    android.util.Log.d("ChatScreen", "Launching video picker")
+                // Android 13+ (API 33+): Modern photo picker doesn't need permissions
+                if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.TIRAMISU) {
+                    android.util.Log.d("ChatScreen", "Using modern photo picker (no permissions needed)")
                     videoPickerLauncher.launch(Unit)
                 } else {
-                    android.util.Log.d("ChatScreen", "Requesting media permissions")
-                    android.util.Log.d("ChatScreen", "Permissions to request: ${MediaPermissions.getMediaPermissions()}")
-                    pendingMediaAction = "video"
-                    mediaPermissionsState.requestPermissions()
+                    // Older Android: Check permissions first
+                    android.util.Log.d("ChatScreen", "Media permissions granted: ${mediaPermissionsState.allPermissionsGranted}")
+                    
+                    if (mediaPermissionsState.allPermissionsGranted) {
+                        android.util.Log.d("ChatScreen", "Launching video picker")
+                        videoPickerLauncher.launch(Unit)
+                    } else {
+                        android.util.Log.d("ChatScreen", "Requesting media permissions")
+                        pendingMediaAction = "video"
+                        mediaPermissionsState.requestPermissions()
+                    }
                 }
             },
             onFileClick = {

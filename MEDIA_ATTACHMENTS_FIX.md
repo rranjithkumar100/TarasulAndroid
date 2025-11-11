@@ -14,12 +14,19 @@
 ### 2. **Media Permissions Not Working on Android 13+** ✅
 **Problem:** Even after granting permissions, the app showed "Media granted: false" on Android 15.
 
-**Root Cause:** The permission state was not being updated after the user granted permissions through the system dialog.
+**Root Cause:** Android 13+ introduced a new "partial permission" model where users can select specific photos instead of granting full media access. This made the traditional permission approach unreliable.
 
-**Solution:** Updated `rememberMultiplePermissionsState` in `PermissionHandler.kt`:
-- Added `LaunchedEffect` to continuously check and update permission status
-- Re-query system permissions after the permission dialog returns
-- Properly update the state to reflect actual granted permissions
+**Solution - Modern Photo Picker:** 
+- **Completely eliminated the need for media permissions** on Android 13+ by using `MediaStore.ACTION_PICK_IMAGES`
+- This is the **Google-recommended approach** for media selection on modern Android
+- Users can select photos/videos without any permission dialogs
+- Much better privacy and user experience
+
+**Backup Solution - Permission Handler:** Also improved `rememberMultiplePermissionsState` for older Android versions:
+- Added proper coroutine scope management
+- Immediate update from dialog results
+- Delayed re-check to ensure system state is captured
+- Re-check trigger for forced updates
 - Added detailed logging to track individual permission states
 
 ### 3. **Initial Chat Scroll Lag** ✅
@@ -49,18 +56,25 @@
    - Added `LaunchedEffect` to continuously monitor permission status
    - Updated remember key to include `permissionsStatus` for proper recomposition
 
-### Android 13+ Permission Handling
+### Android 13+ Modern Photo Picker (No Permissions Needed!)
 
-The app correctly requests these permissions based on Android version:
+**Major Improvement:** The app now uses the **modern photo picker** on Android 13+ (API 33+), which:
+- ✅ **Requires NO permissions** - Works without READ_MEDIA_IMAGES or READ_MEDIA_VIDEO
+- ✅ **Better privacy** - System handles media access
+- ✅ **Better UX** - Modern, consistent UI across all apps
+- ✅ **Google recommended** - Official best practice for Android 13+
 
-**Android 13+ (API 33+):**
-- `READ_MEDIA_IMAGES` - For gallery images
-- `READ_MEDIA_VIDEO` - For videos
-- `READ_MEDIA_AUDIO` - For audio files
+**How it works:**
+
+**Android 13+ (API 33+) including Android 15:**
+- Uses `MediaStore.ACTION_PICK_IMAGES` - Modern photo picker (NO PERMISSIONS NEEDED!)
+- System provides a secure picker UI
+- App only gets access to specific selected photos/videos
 
 **Android 12 and below:**
-- `READ_EXTERNAL_STORAGE` - For all media
-
+- Uses traditional `Intent.ACTION_PICK` with permissions:
+  - `READ_EXTERNAL_STORAGE` - For accessing media
+  
 All permissions are properly declared in `AndroidManifest.xml` with correct API level restrictions.
 
 ## Testing Performed
