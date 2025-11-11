@@ -106,6 +106,9 @@ dependencies {
     // Kotlinx Serialization
     implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.6.0")
     
+    // Accompanist for swipe gestures
+    implementation("com.google.accompanist:accompanist-permissions:0.32.0")
+    
     testImplementation(libs.junit)
     testImplementation(libs.mockwebserver)
     testImplementation(libs.kotlinx.coroutines.test)

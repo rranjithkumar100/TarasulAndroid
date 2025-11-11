@@ -3,6 +3,8 @@ package com.tcc.tarasulandroid.feature.chat
 import android.net.Uri
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.Spring
+import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -687,7 +689,7 @@ fun ChatScreen(
 }
 
 /**
- * Swipeable message item that triggers reply on swipe
+ * Swipeable message item that triggers reply on swipe - WhatsApp style
  */
 @Composable
 private fun SwipeableMessageItem(
@@ -697,66 +699,138 @@ private fun SwipeableMessageItem(
 ) {
     val message = messageWithMedia.message
     val isOutgoing = message.direction == com.tcc.tarasulandroid.data.db.MessageDirection.OUTGOING
-
-    // Animation state for swipe
+    
+    // Animation states
     val offsetX = remember { Animatable(0f) }
+    val iconScale = remember { Animatable(0f) }
+    val iconRotation = remember { Animatable(0f) }
     val coroutineScope = rememberCoroutineScope()
-
+    
+    // Swipe threshold to trigger reply
+    val swipeThreshold = 80f
+    val maxSwipe = 120f
+    
     Box(
         modifier = Modifier
             .fillMaxWidth()
             .pointerInput(Unit) {
                 detectHorizontalDragGestures(
+                    onDragStart = {
+                        coroutineScope.launch {
+                            iconScale.snapTo(0f)
+                            iconRotation.snapTo(0f)
+                        }
+                    },
                     onDragEnd = {
                         coroutineScope.launch {
-                            // If swiped enough, trigger reply
-                            if (abs(offsetX.value) > 100f) {
+                            // If swiped past threshold, trigger reply
+                            if (abs(offsetX.value) >= swipeThreshold) {
                                 onReply()
+                                
+                                // Quick snap animation for feedback
+                                launch {
+                                    offsetX.animateTo(
+                                        if (isOutgoing) -maxSwipe else maxSwipe,
+                                        animationSpec = tween(50)
+                                    )
+                                }
                             }
-                            // Reset position
-                            offsetX.animateTo(0f, animationSpec = tween(200))
+                            
+                            // Smooth spring animation back to center
+                            launch {
+                                offsetX.animateTo(
+                                    0f,
+                                    animationSpec = spring(
+                                        dampingRatio = Spring.DampingRatioMediumBouncy,
+                                        stiffness = Spring.StiffnessLow
+                                    )
+                                )
+                            }
+                            launch {
+                                iconScale.animateTo(0f, animationSpec = tween(150))
+                            }
+                            launch {
+                                iconRotation.animateTo(0f, animationSpec = tween(150))
+                            }
+                        }
+                    },
+                    onDragCancel = {
+                        coroutineScope.launch {
+                            launch {
+                                offsetX.animateTo(
+                                    0f,
+                                    animationSpec = spring(
+                                        dampingRatio = Spring.DampingRatioMediumBouncy,
+                                        stiffness = Spring.StiffnessLow
+                                    )
+                                )
+                            }
+                            launch {
+                                iconScale.animateTo(0f, animationSpec = tween(150))
+                            }
                         }
                     },
                     onHorizontalDrag = { _, dragAmount ->
                         coroutineScope.launch {
-                            // For incoming messages: swipe right to reply
-                            // For outgoing messages: swipe left to reply
-                            val newOffset = offsetX.value + dragAmount
-                            val maxSwipe = 100f
-
-                            if (isOutgoing) {
+                            val currentOffset = offsetX.value
+                            val newOffset = currentOffset + dragAmount
+                            
+                            // Apply resistance effect for smoother feel
+                            val resistance = 1f - (abs(currentOffset) / maxSwipe).coerceIn(0f, 0.7f)
+                            val adjustedDragAmount = dragAmount * resistance
+                            val finalOffset = currentOffset + adjustedDragAmount
+                            
+                            // Constrain swipe direction based on message type
+                            val constrainedOffset = if (isOutgoing) {
                                 // Outgoing: allow left swipe only
-                                offsetX.snapTo(newOffset.coerceIn(-maxSwipe, 0f))
+                                finalOffset.coerceIn(-maxSwipe, 0f)
                             } else {
                                 // Incoming: allow right swipe only
-                                offsetX.snapTo(newOffset.coerceIn(0f, maxSwipe))
+                                finalOffset.coerceIn(0f, maxSwipe)
                             }
+                            
+                            offsetX.snapTo(constrainedOffset)
+                            
+                            // Animate icon scale and rotation based on swipe progress
+                            val progress = (abs(constrainedOffset) / swipeThreshold).coerceIn(0f, 1f)
+                            iconScale.snapTo(progress)
+                            iconRotation.snapTo(progress * 360f)
                         }
                     }
                 )
             }
     ) {
-        // Reply icon that appears during swipe
-        if (abs(offsetX.value) > 20f) {
-            Icon(
-                painter = painterResource(R.drawable.ic_chat),
-                contentDescription = stringResource(R.string.reply),
-                tint = MaterialTheme.colorScheme.primary,
-                modifier = Modifier
-                    .align(if (isOutgoing) Alignment.CenterEnd else Alignment.CenterStart)
-                    .padding(horizontal = 16.dp)
-                    .size(24.dp)
-                    .graphicsLayer {
-                        alpha = (abs(offsetX.value) / 100f).coerceIn(0f, 1f)
-                    }
-            )
-        }
-
-        // Message bubble with offset
+        // Reply icon that appears during swipe - behind the message
         Box(
-            modifier = Modifier.graphicsLayer {
-                translationX = offsetX.value
+            modifier = Modifier
+                .align(if (isOutgoing) Alignment.CenterEnd else Alignment.CenterStart)
+                .padding(horizontal = 24.dp)
+        ) {
+            if (abs(offsetX.value) > 5f) {
+                Icon(
+                    painter = painterResource(R.drawable.ic_chat),
+                    contentDescription = stringResource(R.string.reply),
+                    tint = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier
+                        .size(28.dp)
+                        .graphicsLayer {
+                            alpha = iconScale.value
+                            scaleX = 0.7f + (iconScale.value * 0.3f)
+                            scaleY = 0.7f + (iconScale.value * 0.3f)
+                            rotationZ = if (isOutgoing) -iconRotation.value * 0.2f else iconRotation.value * 0.2f
+                        }
+                )
             }
+        }
+        
+        // Message bubble with smooth offset and slight rotation
+        Box(
+            modifier = Modifier
+                .graphicsLayer {
+                    translationX = offsetX.value
+                    // Subtle rotation for more natural feel
+                    rotationZ = (offsetX.value / maxSwipe) * 2f
+                }
         ) {
             MessageBubble(
                 messageWithMedia = messageWithMedia,
