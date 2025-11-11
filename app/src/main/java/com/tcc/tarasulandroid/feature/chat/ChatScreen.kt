@@ -51,7 +51,8 @@ import kotlin.math.abs
 fun ChatScreen(
     contact: Contact,
     onBackClick: () -> Unit,
-    onProfileClick: () -> Unit = {}
+    onProfileClick: () -> Unit = {},
+    onImageClick: (String) -> Unit = {}
 ) {
     val context = LocalContext.current
     var messageText by remember { mutableStateOf("") }
@@ -973,7 +974,8 @@ private fun SwipeableMessageItem(
             MessageBubbleWithReply(
                 messageWithMedia = messageWithMedia,
                 replyToMessage = replyToMessage,
-                onDownloadClick = onDownloadClick
+                onDownloadClick = onDownloadClick,
+                onImageClick = onImageClick
             )
         }
     }
@@ -1005,13 +1007,15 @@ private fun MessageWithMediaAndReply.toReplyMessage(contactName: String): ReplyM
 private fun MessageBubbleWithReply(
     messageWithMedia: MessageWithMediaAndReply,
     replyToMessage: com.tcc.tarasulandroid.data.db.MessageEntity?,
-    onDownloadClick: (String) -> Unit
+    onDownloadClick: (String) -> Unit,
+    onImageClick: (String) -> Unit = {}
 ) {
     // If no reply, just show regular bubble
     if (replyToMessage == null) {
         MessageBubble(
             messageWithMedia = MessageWithMedia(messageWithMedia.message, messageWithMedia.media),
-            onDownloadClick = onDownloadClick
+            onDownloadClick = onDownloadClick,
+            onImageClick = onImageClick
         )
     } else {
         // Show reply indicator inside the message bubble
@@ -1058,7 +1062,8 @@ private fun MessageBubbleWithReply(
                                     modifier = Modifier
                                         .fillMaxWidth()
                                         .height(200.dp)
-                                        .clip(RoundedCornerShape(8.dp)),
+                                        .clip(RoundedCornerShape(8.dp))
+                                        .clickable { onImageClick(media.localPath) },
                                     contentScale = androidx.compose.ui.layout.ContentScale.Crop
                                 )
                             }

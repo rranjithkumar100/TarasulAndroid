@@ -70,12 +70,12 @@ fun ProfileInfoScreen(
             
             Spacer(modifier = Modifier.height(8.dp))
             
-            // Phone Number Section (if available)
+            // Phone Number Section
             ProfileSection(title = stringResource(R.string.phone_number)) {
                 ProfileInfoItem(
                     icon = Icons.Default.Phone,
                     label = stringResource(R.string.mobile),
-                    value = "+966 XX XXX XXXX" // Placeholder
+                    value = contact.id // Contact ID is the phone number
                 )
             }
             
@@ -115,70 +115,71 @@ fun ProfileInfoScreen(
 
 @Composable
 private fun ProfileHeader(contact: Contact) {
-    Surface(
-        color = MaterialTheme.colorScheme.surface,
-        modifier = Modifier.fillMaxWidth()
+    // Full width surface for profile header
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .background(MaterialTheme.colorScheme.surface)
+            .padding(vertical = 32.dp),
+        horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        Column(
+        // Profile Picture
+        Box(
+            modifier = Modifier
+                .size(120.dp)
+                .clip(CircleShape)
+                .background(MaterialTheme.colorScheme.primaryContainer),
+            contentAlignment = Alignment.Center
+        ) {
+            Text(
+                text = contact.name.first().toString(),
+                style = MaterialTheme.typography.displayLarge,
+                color = MaterialTheme.colorScheme.onPrimaryContainer,
+                fontWeight = FontWeight.Bold
+            )
+        }
+        
+        Spacer(modifier = Modifier.height(16.dp))
+        
+        // Name - Full width text
+        Text(
+            text = contact.name,
+            style = MaterialTheme.typography.headlineMedium,
+            fontWeight = FontWeight.Bold,
+            textAlign = TextAlign.Center,
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(vertical = 32.dp),
-            horizontalAlignment = Alignment.CenterHorizontally
+                .padding(horizontal = 16.dp)
+        )
+        
+        Spacer(modifier = Modifier.height(8.dp))
+        
+        // Online Status - Full width row
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.Center
         ) {
-            // Profile Picture
             Box(
                 modifier = Modifier
-                    .size(120.dp)
+                    .size(8.dp)
                     .clip(CircleShape)
-                    .background(MaterialTheme.colorScheme.primaryContainer),
-                contentAlignment = Alignment.Center
-            ) {
-                Text(
-                    text = contact.name.first().toString(),
-                    style = MaterialTheme.typography.displayLarge,
-                    color = MaterialTheme.colorScheme.onPrimaryContainer,
-                    fontWeight = FontWeight.Bold
-                )
-            }
-            
-            Spacer(modifier = Modifier.height(16.dp))
-            
-            // Name
-            Text(
-                text = contact.name,
-                style = MaterialTheme.typography.headlineMedium,
-                fontWeight = FontWeight.Bold,
-                textAlign = TextAlign.Center
+                    .background(
+                        if (contact.isOnline) 
+                            MaterialTheme.colorScheme.primary 
+                        else 
+                            MaterialTheme.colorScheme.onSurfaceVariant
+                    )
             )
-            
-            Spacer(modifier = Modifier.height(8.dp))
-            
-            // Online Status
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.Center
-            ) {
-                Box(
-                    modifier = Modifier
-                        .size(8.dp)
-                        .clip(CircleShape)
-                        .background(
-                            if (contact.isOnline) 
-                                MaterialTheme.colorScheme.primary 
-                            else 
-                                MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                )
-                Spacer(modifier = Modifier.width(8.dp))
-                Text(
-                    text = if (contact.isOnline) 
-                        stringResource(R.string.online) 
-                    else 
-                        stringResource(R.string.offline),
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-            }
+            Spacer(modifier = Modifier.width(8.dp))
+            Text(
+                text = if (contact.isOnline) 
+                    stringResource(R.string.online) 
+                else 
+                    stringResource(R.string.offline),
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
         }
     }
 }

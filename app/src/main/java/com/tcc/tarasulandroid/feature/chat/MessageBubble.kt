@@ -34,7 +34,8 @@ import java.util.*
 fun MessageBubble(
     messageWithMedia: MessageWithMedia,
     modifier: Modifier = Modifier,
-    onDownloadClick: (String) -> Unit = {}
+    onDownloadClick: (String) -> Unit = {},
+    onImageClick: (String) -> Unit = {}
 ) {
     val message = messageWithMedia.message
     val media = messageWithMedia.media
@@ -59,7 +60,7 @@ fun MessageBubble(
                 // Render media content based on type
                 when (message.type) {
                     MessageType.IMAGE -> {
-                        ImageMessageContent(media, onDownloadClick)
+                        ImageMessageContent(media, onDownloadClick, onImageClick)
                     }
                     MessageType.VIDEO -> {
                         VideoMessageContent(media, onDownloadClick)
@@ -108,7 +109,8 @@ fun MessageBubble(
 @Composable
 private fun ImageMessageContent(
     media: com.tcc.tarasulandroid.data.db.MediaEntity?,
-    onDownloadClick: (String) -> Unit
+    onDownloadClick: (String) -> Unit,
+    onImageClick: (String) -> Unit
 ) {
     if (media == null) return
     
@@ -124,7 +126,9 @@ private fun ImageMessageContent(
                     AsyncImage(
                         model = File(media.localPath),
                         contentDescription = stringResource(R.string.image_message),
-                        modifier = Modifier.fillMaxSize(),
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .clickable { onImageClick(media.localPath) },
                         contentScale = ContentScale.Crop
                     )
                 }
