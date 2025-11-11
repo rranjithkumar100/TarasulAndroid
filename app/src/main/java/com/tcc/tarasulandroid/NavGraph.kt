@@ -15,7 +15,6 @@ import com.tcc.tarasulandroid.feature.chat.ProfileInfoScreen
 import com.tcc.tarasulandroid.feature.contacts.ContactListScreen
 import com.tcc.tarasulandroid.feature.home.model.Contact
 import com.tcc.tarasulandroid.feature.home.ui.HomeScreen
-import com.tcc.tarasulandroid.feature.image.ImagePreviewScreen
 import com.tcc.tarasulandroid.feature.login.LoginScreen
 
 @Composable
@@ -60,11 +59,8 @@ fun NavGraph(
                 onBackClick = { navController.popBackStack() },
                 onProfileClick = {
                     navController.navigate("profile_info/${contactId}/${contactName}/${isOnline}")
-                },
-                onImageClick = { imagePath ->
-                    val encodedPath = Uri.encode(imagePath)
-                    navController.navigate("image_preview/$encodedPath")
                 }
+                // onImageClick handled internally by dialog now
             )
         }
         
@@ -96,34 +92,7 @@ fun NavGraph(
             ContactListScreen(navController = navController)
         }
         
-        // Image Preview with zoom and gestures + WhatsApp-style fade animation
-        composable(
-            route = "image_preview/{imagePath}",
-            arguments = listOf(
-                navArgument("imagePath") { type = NavType.StringType }
-            ),
-            enterTransition = {
-                fadeIn(animationSpec = tween(200))
-            },
-            exitTransition = {
-                fadeOut(animationSpec = tween(200))
-            },
-            popEnterTransition = {
-                // Keep the chat screen visible when image preview is dismissed
-                EnterTransition.None
-            },
-            popExitTransition = {
-                // Fade out the image preview
-                fadeOut(animationSpec = tween(200))
-            }
-        ) { backStackEntry ->
-            val encodedPath = backStackEntry.arguments?.getString("imagePath") ?: ""
-            val imagePath = Uri.decode(encodedPath)
-            
-            ImagePreviewScreen(
-                imagePath = imagePath,
-                onDismiss = { navController.popBackStack() }
-            )
-        }
+        // Note: Image preview is now handled by ImagePreviewDialog (full-screen dialog)
+        // This provides better performance and WhatsApp-style animations without white screens
     }
 }

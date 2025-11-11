@@ -59,6 +59,10 @@ fun ChatScreen(
     var showMediaPicker by remember { mutableStateOf(false) }
     var cameraImageUri by remember { mutableStateOf<Uri?>(null) }
     val coroutineScope = rememberCoroutineScope()
+    
+    // Full-screen image preview dialog state (Professional WhatsApp-style)
+    var showImagePreview by remember { mutableStateOf(false) }
+    var selectedImagePath by remember { mutableStateOf<String?>(null) }
 
     // DI
     val messagesRepository = remember {
@@ -746,7 +750,10 @@ fun ChatScreen(
                                 messagesRepository.downloadMedia(mediaId)
                             }
                         },
-                        onImageClick = onImageClick
+                        onImageClick = { imagePath ->
+                            selectedImagePath = imagePath
+                            showImagePreview = true
+                        }
                     )
                     Spacer(modifier = Modifier.height(8.dp))
                 }
@@ -833,6 +840,17 @@ fun ChatScreen(
                         contactsPermissionState.requestPermissions()
                     }
                 }
+            }
+        )
+    }
+    
+    // Professional WhatsApp-style full-screen image preview dialog
+    if (showImagePreview && selectedImagePath != null) {
+        com.tcc.tarasulandroid.feature.image.ImagePreviewDialog(
+            imagePath = selectedImagePath!!,
+            onDismiss = {
+                showImagePreview = false
+                selectedImagePath = null
             }
         )
     }
