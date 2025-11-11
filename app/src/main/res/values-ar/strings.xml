@@ -1,0 +1,147 @@
+<resources>
+    <string name="app_name">تراسُل</string>
+    
+    <!-- Login Screen -->
+    <string name="welcome_back">مرحبًا بعودتك</string>
+    <string name="sign_in_to_continue">سجل الدخول للمتابعة</string>
+    <string name="email">البريد الإلكتروني</string>
+    <string name="enter_email">أدخل بريدك الإلكتروني</string>
+    <string name="password">كلمة المرور</string>
+    <string name="enter_password">أدخل كلمة المرور</string>
+    <string name="forgot_password">هل نسيت كلمة المرور؟</string>
+    <string name="sign_in">تسجيل الدخول</string>
+    <string name="dont_have_account">ليس لديك حساب؟</string>
+    <string name="sign_up">إنشاء حساب</string>
+    <string name="hide_password">إخفاء كلمة المرور</string>
+    <string name="show_password">إظهار كلمة المرور</string>
+    <string name="language">اللغة</string>
+    <string name="english">English</string>
+    <string name="arabic">العربية</string>
+    
+    <!-- Login Errors -->
+    <string name="error_invalid_credentials">البريد الإلكتروني أو كلمة المرور غير صحيحة</string>
+    <string name="error_network">خطأ في الشبكة. يرجى المحاولة مرة أخرى.</string>
+    <string name="login_success">تم تسجيل الدخول بنجاح!</string>
+    
+    <!-- Home Screen -->
+    <string name="chats">المحادثات</string>
+    <string name="profile">الملف الشخصي</string>
+    
+    <!-- Chat List Screen -->
+    <string name="messages">الرسائل</string>
+    <string name="new_message">رسالة جديدة</string>
+    <string name="online">متصل</string>
+    <string name="offline">غير متصل</string>
+    <string name="just_now">الآن</string>
+    <string name="no_chats_yet">لا توجد محادثات بعد</string>
+    <string name="no_chats_message">ابدأ محادثة بالنقر على الزر أدناه لاختيار جهة اتصال</string>
+    <string name="start_new_chat">بدء محادثة جديدة</string>
+    
+    <!-- Chat Screen -->
+    <string name="type_message">اكتب رسالة...</string>
+    <string name="send">إرسال</string>
+    <string name="reply">رد</string>
+    <string name="replying_to">الرد على %s</string>
+    
+    <!-- Profile Screen -->
+    <string name="appearance">المظهر</string>
+    <string name="dark_theme">الوضع الداكن</string>
+    <string name="dark_theme_desc">التبديل بين الوضع الفاتح والداكن</string>
+    <string name="account">الحساب</string>
+    <string name="edit_profile">تعديل الملف الشخصي</string>
+    <string name="edit_profile_desc">تغيير اسمك وصورتك</string>
+    <string name="privacy">الخصوصية</string>
+    <string name="privacy_desc">التحكم في إعدادات الخصوصية</string>
+    <string name="notifications">الإشعارات</string>
+    <string name="notifications_desc">إدارة تفضيلات الإشعارات</string>
+    <string name="more">المزيد</string>
+    <string name="help_support">المساعدة والدعم</string>
+    <string name="help_support_desc">احصل على المساعدة واتصل بنا</string>
+    <string name="about">حول</string>
+    <string name="about_desc">إصدار التطبيق والمعلومات</string>
+    <string name="logout">تسجيل الخروج</string>
+    <string name="language_settings">اللغة</string>
+    <string name="language_settings_desc">تغيير لغة التطبيق</string>
+    
+    <!-- Contact Names (Dummy) -->
+    <string name="contact_alice">أليس جونسون</string>
+    <string name="contact_bob">بوب سميث</string>
+    <string name="contact_charlie">تشارلي براون</string>
+    <string name="contact_diana">ديانا برينس</string>
+    <string name="contact_edward">إدوارد نورتون</string>
+    
+    <!-- Contact Messages (Dummy) -->
+    <string name="message_alice">مرحبًا! كيف حالك؟</string>
+    <string name="message_bob">هل رأيت آخر تحديث؟</string>
+    <string name="message_charlie">شكرًا لمساعدتك!</string>
+    <string name="message_diana">لنلتقي غدًا الساعة 3 مساءً</string>
+    <string name="message_edward">عمل رائع في المشروع!</string>
+    
+    <!-- Chat Messages -->
+    <string name="chat_message_1">مرحبًا! كيف حالك؟</string>
+    <string name="chat_message_2">أهلاً! أنا بخير، شكرًا لسؤالك!</string>
+    <string name="chat_message_3">هذا رائع! هل تريد اللقاء لاحقًا؟</string>
+    <string name="chat_message_4">بالتأكيد! ما الوقت المناسب لك؟</string>
+    <string name="chat_message_5">ما رأيك في الساعة 5 مساءً؟</string>
+    
+    <!-- Common -->
+    <string name="back">رجوع</string>
+    <string name="loading">جارٍ التحميل...</string>
+    <string name="error">خطأ</string>
+    <string name="retry">إعادة المحاولة</string>
+    <string name="ok">حسنًا</string>
+    <string name="cancel">إلغاء</string>
+    
+    <!-- Contacts -->
+    <string name="contacts">جهات الاتصال</string>
+    <string name="search_contacts">ابحث عن جهات الاتصال...</string>
+    <string name="sync_contacts">مزامنة جهات الاتصال</string>
+    <string name="sync_now">مزامنة الآن</string>
+    <string name="no_contacts_found">لا توجد جهات اتصال بعد</string>
+    <string name="no_contacts_message">انقر على زر المزامنة لتحميل جهات اتصال جهازك</string>
+    <string name="loading_contacts">جارٍ تحميل جهات الاتصال...</string>
+    <string name="syncing_contacts">جارٍ المزامنة...</string>
+    <string name="permission_contacts_title">مطلوب إذن جهات الاتصال</string>
+    <string name="permission_contacts_message">لعرض جهات الاتصال والمحادثة معهم، نحتاج إلى الوصول إلى جهات اتصال جهازك. يرجى منح الإذن في الإعدادات.</string>
+    <string name="open_settings">فتح الإعدادات</string>
+    <string name="grant_permission">منح الإذن</string>
+    <string name="try_again">حاول مرة أخرى</string>
+    <string name="syncing">جارٍ المزامنة...</string>
+    <string name="contacts_loaded">تم تحميل %d جهة اتصال</string>
+    <string name="no_results_found">لم يتم العثور على نتائج</string>
+    <string name="no_results_message">لا توجد جهات اتصال تطابق \"%1$s\"</string>
+    
+    <!-- Media Picker -->
+    <string name="send_media">إرسال وسائط</string>
+    <string name="camera">الكاميرا</string>
+    <string name="gallery">المعرض</string>
+    <string name="video">فيديو</string>
+    <string name="document">مستند</string>
+    <string name="contact">جهة اتصال</string>
+    <string name="attach_media">إرفاق وسائط</string>
+    
+    <!-- Media Messages -->
+    <string name="image_message">رسالة صورة</string>
+    <string name="video_thumbnail">صورة مصغرة للفيديو</string>
+    <string name="file">ملف</string>
+    <string name="audio">صوت</string>
+    <string name="download">تنزيل</string>
+    <string name="download_video">تنزيل الفيديو</string>
+    <string name="download_failed">فشل التنزيل</string>
+    <string name="downloading">جارٍ التنزيل...</string>
+    <string name="download_progress">%d%%</string>
+    
+    <!-- Contact Card -->
+    <string name="message_contact">مراسلة جهة الاتصال</string>
+    <string name="contact_information">معلومات جهة الاتصال</string>
+    <string name="unknown_contact">جهة اتصال غير معروفة</string>
+    <string name="shared_contact">مشاركة جهة الاتصال: %s</string>
+    <string name="more_numbers">+%d أخرى</string>
+    
+    <!-- Message Status -->
+    <string name="message_pending">قيد الانتظار</string>
+    <string name="message_sent">تم الإرسال</string>
+    <string name="message_delivered">تم التوصيل</string>
+    <string name="message_read">تمت القراءة</string>
+    <string name="message_failed">فشل</string>
+</resources>
