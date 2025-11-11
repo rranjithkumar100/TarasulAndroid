@@ -2,6 +2,8 @@ package com.tcc.tarasulandroid.feature.image
 
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.Spring
+import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.detectVerticalDragGestures
@@ -37,7 +39,10 @@ fun ImagePreviewScreen(
     imagePath: String,
     onDismiss: () -> Unit
 ) {
-    var offsetY by remember { mutableStateOf(0f) }
+    // Professional animation state management
+    val offsetY = remember { Animatable(0f) }
+    val scale = remember { Animatable(1f) }
+    val backgroundAlpha = remember { Animatable(1f) }
     var isDragging by remember { mutableStateOf(false) }
     var isDismissing by remember { mutableStateOf(false) }
     val zoomState = rememberZoomableState()
@@ -45,16 +50,6 @@ fun ImagePreviewScreen(
     
     // Dismiss threshold: swipe down by 200dp
     val dismissThreshold = 200f
-    
-    // Background opacity based on vertical offset
-    val backgroundAlpha = remember(offsetY) {
-        (1f - (abs(offsetY) / dismissThreshold)).coerceIn(0f, 1f)
-    }
-    
-    // Scale effect based on vertical offset
-    val scale = remember(offsetY) {
-        (1f - (abs(offsetY) / (dismissThreshold * 5))).coerceIn(0.8f, 1f)
-    }
     
     // Handle back button press
     BackHandler(enabled = !isDismissing) {
@@ -67,7 +62,7 @@ fun ImagePreviewScreen(
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(Color.Black.copy(alpha = backgroundAlpha))
+            .background(Color.Black.copy(alpha = backgroundAlpha.value))
             .pointerInput(Unit) {
                 detectVerticalDragGestures(
                     onDragStart = {
@@ -78,34 +73,111 @@ fun ImagePreviewScreen(
                     },
                     onDragEnd = {
                         if (isDragging && !isDismissing) {
-                            if (abs(offsetY) > dismissThreshold) {
-                                // Dismiss if swiped far enough
-                                isDismissing = true
-                                coroutineScope.launch {
-                                    // Animate to full dismiss
-                                    kotlinx.coroutines.delay(100)
+                            coroutineScope.launch {
+                                if (abs(offsetY.value) > dismissThreshold) {
+                                    // Smooth dismiss animation
+                                    isDismissing = true
+                                    
+                                    // Animate all properties simultaneously for smooth exit
+                                    launch {
+                                        offsetY.animateTo(
+                                            targetValue = if (offsetY.value > 0) 1000f else -1000f,
+                                            animationSpec = tween(300)
+                                        )
+                                    }
+                                    launch {
+                                        scale.animateTo(
+                                            targetValue = 0.5f,
+                                            animationSpec = tween(300)
+                                        )
+                                    }
+                                    launch {
+                                        backgroundAlpha.animateTo(
+                                            targetValue = 0f,
+                                            animationSpec = tween(300)
+                                        )
+                                    }
+                                    
+                                    kotlinx.coroutines.delay(300)
                                     onDismiss()
-                                }
-                            } else {
-                                // Snap back to original position
-                                coroutineScope.launch {
-                                    while (offsetY != 0f) {
-                                        offsetY = (offsetY * 0.8f)
-                                        if (abs(offsetY) < 1f) offsetY = 0f
-                                        kotlinx.coroutines.delay(16)
+                                } else {
+                                    // Smooth spring snap-back animation (WhatsApp style)
+                                    launch {
+                                        offsetY.animateTo(
+                                            targetValue = 0f,
+                                            animationSpec = spring(
+                                                dampingRatio = Spring.DampingRatioMediumBouncy,
+                                                stiffness = Spring.StiffnessMedium
+                                            )
+                                        )
+                                    }
+                                    launch {
+                                        scale.animateTo(
+                                            targetValue = 1f,
+                                            animationSpec = spring(
+                                                dampingRatio = Spring.DampingRatioMediumBouncy,
+                                                stiffness = Spring.StiffnessMedium
+                                            )
+                                        )
+                                    }
+                                    launch {
+                                        backgroundAlpha.animateTo(
+                                            targetValue = 1f,
+                                            animationSpec = spring(
+                                                dampingRatio = Spring.DampingRatioMediumBouncy,
+                                                stiffness = Spring.StiffnessMedium
+                                            )
+                                        )
                                     }
                                 }
+                                isDragging = false
                             }
-                            isDragging = false
                         }
                     },
                     onDragCancel = {
-                        offsetY = 0f
-                        isDragging = false
+                        coroutineScope.launch {
+                            isDragging = false
+                            // Smooth spring snap-back
+                            launch {
+                                offsetY.animateTo(
+                                    targetValue = 0f,
+                                    animationSpec = spring(
+                                        dampingRatio = Spring.DampingRatioMediumBouncy,
+                                        stiffness = Spring.StiffnessMedium
+                                    )
+                                )
+                            }
+                            launch {
+                                scale.animateTo(
+                                    targetValue = 1f,
+                                    animationSpec = spring(
+                                        dampingRatio = Spring.DampingRatioMediumBouncy,
+                                        stiffness = Spring.StiffnessMedium
+                                    )
+                                )
+                            }
+                            launch {
+                                backgroundAlpha.animateTo(
+                                    targetValue = 1f,
+                                    animationSpec = spring(
+                                        dampingRatio = Spring.DampingRatioMediumBouncy,
+                                        stiffness = Spring.StiffnessMedium
+                                    )
+                                )
+                            }
+                        }
                     },
                     onVerticalDrag = { _, dragAmount ->
                         if (isDragging && zoomState.zoomFraction == 0f && !isDismissing) {
-                            offsetY += dragAmount
+                            coroutineScope.launch {
+                                // Update offset instantly for responsive feel
+                                offsetY.snapTo(offsetY.value + dragAmount)
+                                
+                                // Update alpha and scale based on offset (smooth calculations)
+                                val progress = (abs(offsetY.value) / dismissThreshold).coerceIn(0f, 1f)
+                                backgroundAlpha.snapTo((1f - progress).coerceIn(0f, 1f))
+                                scale.snapTo((1f - progress * 0.2f).coerceIn(0.8f, 1f))
+                            }
                         }
                     }
                 )
@@ -131,7 +203,7 @@ fun ImagePreviewScreen(
                 }
             },
             colors = TopAppBarDefaults.topAppBarColors(
-                containerColor = Color.Black.copy(alpha = 0.3f * backgroundAlpha)
+                containerColor = Color.Black.copy(alpha = 0.3f * backgroundAlpha.value)
             ),
             modifier = Modifier.statusBarsPadding()
         )
@@ -143,9 +215,9 @@ fun ImagePreviewScreen(
             modifier = Modifier
                 .fillMaxSize()
                 .graphicsLayer {
-                    translationY = offsetY
-                    scaleX = scale
-                    scaleY = scale
+                    translationY = offsetY.value
+                    scaleX = scale.value
+                    scaleY = scale.value
                 }
                 .zoomable(
                     state = zoomState,

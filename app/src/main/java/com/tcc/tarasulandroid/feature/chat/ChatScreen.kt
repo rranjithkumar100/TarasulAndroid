@@ -530,7 +530,9 @@ fun ChatScreen(
         // Use default insets for top (safe choice). We'll handle bottom/IME in bottomBar only.
         topBar = {
             Surface(
-                modifier = Modifier.fillMaxWidth(),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .statusBarsPadding(),
                 color = MaterialTheme.colorScheme.surface,
                 shadowElevation = 4.dp
             ) {
