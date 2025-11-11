@@ -130,6 +130,8 @@
     <string name="download_failed">Download failed</string>
     <string name="downloading">Downloading…</string>
     <string name="download_progress">%d%%</string>
+    <string name="play_video">Play video</string>
+    <string name="video_not_found">Video file not found. It may have been deleted.</string>
     
     <!-- Contact Card -->
     <string name="message_contact">Message contact</string>

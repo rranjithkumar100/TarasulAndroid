@@ -1,6 +1,8 @@
 package com.tcc.tarasulandroid.data
 
 import android.content.Context
+import android.graphics.Bitmap
+import android.media.MediaMetadataRetriever
 import android.net.Uri
 import android.util.Log
 import com.tcc.tarasulandroid.data.db.*
@@ -68,12 +70,20 @@ class MediaRepository @Inject constructor(
         val checksum = calculateChecksum(targetFile)
         
         // Extract additional metadata based on type
-        val (width, height, durationMs) = extractMediaMetadata(uri, mimeType)
+        val (width, height, durationMs) = extractMediaMetadata(targetFile, mimeType)
+        
+        // Generate thumbnail for videos
+        var thumbnailPath: String? = null
+        if (mimeType?.startsWith("video/") == true) {
+            thumbnailPath = generateVideoThumbnail(targetFile, mediaId)
+            Log.d(TAG, "Generated video thumbnail: $thumbnailPath")
+        }
         
         val media = MediaEntity(
             mediaId = mediaId,
             messageId = messageId,
             localPath = targetFile.absolutePath,
+            thumbnailPath = thumbnailPath,
             fileName = fileName ?: targetFile.name,
             mimeType = mimeType,
             fileSize = fileSize,
@@ -260,10 +270,66 @@ class MediaRepository @Inject constructor(
         }
     }
     
-    private fun extractMediaMetadata(uri: Uri, mimeType: String?): Triple<Int?, Int?, Long?> {
-        // TODO: Use MediaMetadataRetriever for video/audio
-        // TODO: Use BitmapFactory for images
-        // For now, return nulls
-        return Triple(null, null, null)
+    private fun extractMediaMetadata(file: File, mimeType: String?): Triple<Int?, Int?, Long?> {
+        return try {
+            when {
+                mimeType?.startsWith("video/") == true || mimeType?.startsWith("audio/") == true -> {
+                    val retriever = MediaMetadataRetriever()
+                    try {
+                        retriever.setDataSource(file.absolutePath)
+                        
+                        val width = retriever.extractMetadata(MediaMetadataRetriever.METADATA_KEY_VIDEO_WIDTH)?.toIntOrNull()
+                        val height = retriever.extractMetadata(MediaMetadataRetriever.METADATA_KEY_VIDEO_HEIGHT)?.toIntOrNull()
+                        val durationMs = retriever.extractMetadata(MediaMetadataRetriever.METADATA_KEY_DURATION)?.toLongOrNull()
+                        
+                        Triple(width, height, durationMs)
+                    } finally {
+                        retriever.release()
+                    }
+                }
+                else -> Triple(null, null, null)
+            }
+        } catch (e: Exception) {
+            Log.e(TAG, "Error extracting media metadata", e)
+            Triple(null, null, null)
+        }
+    }
+    
+    /**
+     * Generate thumbnail from video file
+     */
+    private fun generateVideoThumbnail(videoFile: File, mediaId: String): String? {
+        return try {
+            val retriever = MediaMetadataRetriever()
+            try {
+                retriever.setDataSource(videoFile.absolutePath)
+                
+                // Get frame at 1 second (or first frame if video is shorter)
+                val bitmap = retriever.getFrameAtTime(
+                    1_000_000, // 1 second in microseconds
+                    MediaMetadataRetriever.OPTION_CLOSEST_SYNC
+                ) ?: retriever.getFrameAtTime(0, MediaMetadataRetriever.OPTION_CLOSEST_SYNC)
+                
+                if (bitmap != null) {
+                    // Save thumbnail
+                    val thumbnailFile = File(thumbnailDir, "$mediaId.jpg")
+                    FileOutputStream(thumbnailFile).use { out ->
+                        bitmap.compress(Bitmap.CompressFormat.JPEG, 85, out)
+                    }
+                    bitmap.recycle()
+                    
+                    Log.d(TAG, "Video thumbnail saved: ${thumbnailFile.absolutePath}")
+                    thumbnailFile.absolutePath
+                } else {
+                    Log.w(TAG, "Could not extract frame from video")
+                    null
+                }
+            } finally {
+                retriever.release()
+            }
+        } catch (e: Exception) {
+            Log.e(TAG, "Error generating video thumbnail", e)
+            null
+        }
     }
 }

@@ -130,6 +130,8 @@
     <string name="download_failed">فشل التنزيل</string>
     <string name="downloading">جارٍ التنزيل...</string>
     <string name="download_progress">%d%%</string>
+    <string name="play_video">تشغيل الفيديو</string>
+    <string name="video_not_found">لم يتم العثور على ملف الفيديو. ربما تم حذفه.</string>
     
     <!-- Contact Card -->
     <string name="message_contact">مراسلة جهة الاتصال</string>
