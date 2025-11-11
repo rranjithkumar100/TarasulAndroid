@@ -93,7 +93,10 @@ fun ChatListScreen(
                         .fillMaxSize()
                         .padding(padding)
                 ) {
-                    items(contacts) { contact ->
+                    items(
+                        items = contacts,
+                        key = { contact -> contact.id }
+                    ) { contact ->
                         ContactItem(
                             contact = contact,
                             onClick = { onContactClick(contact) }

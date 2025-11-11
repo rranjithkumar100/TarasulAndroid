@@ -93,6 +93,43 @@ class MessagesRepository @Inject constructor(
     }
     
     /**
+     * Get messages with media for a conversation with pagination (like WhatsApp)
+     * Returns messages in DESC order (newest first) for pagination
+     */
+    suspend fun getMessagesWithMediaPaginated(
+        conversationId: String,
+        limit: Int = 30,
+        offset: Int = 0
+    ): List<MessageWithMedia> = withContext(Dispatchers.IO) {
+        val messagesWithMedia = messagesDao.getMessagesWithMediaPaginated(conversationId, limit, offset)
+        messagesWithMedia.map { messageWithMedia ->
+            val message = messageWithMedia.message
+            if (message.isEncrypted && message.content.isNotEmpty()) {
+                try {
+                    val key = getEncryptionKey(conversationId)
+                    val decryptedContent = MessageEncryption.decrypt(message.content, key)
+                    messageWithMedia.copy(
+                        message = message.copy(content = decryptedContent)
+                    )
+                } catch (e: Exception) {
+                    messageWithMedia.copy(
+                        message = message.copy(content = "🔒 Decryption failed")
+                    )
+                }
+            } else {
+                messageWithMedia
+            }
+        }.reversed() // Reverse to get oldest first for display
+    }
+    
+    /**
+     * Get total message count for a conversation
+     */
+    suspend fun getMessageCount(conversationId: String): Int = withContext(Dispatchers.IO) {
+        messagesDao.getMessageCount(conversationId)
+    }
+    
+    /**
      * Get messages with reply information for a conversation
      */
     fun getMessagesWithReplyForConversation(conversationId: String): Flow<List<MessageWithReply>> {

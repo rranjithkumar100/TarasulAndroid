@@ -3,6 +3,7 @@ package com.tcc.tarasulandroid.feature.chat
 import android.net.Uri
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -36,7 +37,8 @@ import kotlinx.coroutines.launch
 @Composable
 fun ChatScreen(
     contact: Contact,
-    onBackClick: () -> Unit
+    onBackClick: () -> Unit,
+    onProfileClick: () -> Unit = {}
 ) {
     val context = LocalContext.current
     var messageText by remember { mutableStateOf("") }
@@ -54,6 +56,11 @@ fun ChatScreen(
     }
 
     var conversationId by remember { mutableStateOf<String?>(null) }
+    var messages by remember { mutableStateOf<List<com.tcc.tarasulandroid.data.MessageWithMedia>>(emptyList()) }
+    var isLoadingMessages by remember { mutableStateOf(false) }
+    var hasMoreMessages by remember { mutableStateOf(true) }
+    var currentOffset by remember { mutableStateOf(0) }
+    val pageSize = 30
 
     LaunchedEffect(contact.id) {
         try {
@@ -63,19 +70,62 @@ fun ChatScreen(
                 contactPhoneNumber = ""
             )
             conversationId = conversation.id
-        } catch (_: Exception) {}
+            
+            // Load initial messages
+            if (conversationId != null) {
+                isLoadingMessages = true
+                val initialMessages = messagesRepository.getMessagesWithMediaPaginated(
+                    conversationId = conversationId!!,
+                    limit = pageSize,
+                    offset = 0
+                )
+                messages = initialMessages
+                currentOffset = initialMessages.size
+                
+                val totalCount = messagesRepository.getMessageCount(conversationId!!)
+                hasMoreMessages = initialMessages.size < totalCount
+                isLoadingMessages = false
+            }
+        } catch (_: Exception) {
+            isLoadingMessages = false
+        }
     }
-
-    // Fetch messages with media data
-    val messagesWithMediaFromDb by messagesRepository
-        .getMessagesWithMediaForConversation(conversationId ?: "")
-        .collectAsState(initial = emptyList())
 
     val listState = rememberLazyListState()
 
-    LaunchedEffect(messagesWithMediaFromDb.size) {
-        if (messagesWithMediaFromDb.isNotEmpty()) {
-            listState.animateScrollToItem(messagesWithMediaFromDb.size - 1)
+    // Auto-scroll to bottom when new messages arrive
+    LaunchedEffect(messages.size) {
+        if (messages.isNotEmpty() && currentOffset <= pageSize) {
+            // Only auto-scroll for the first page (initial load or new messages)
+            listState.animateScrollToItem(messages.size - 1)
+        }
+    }
+    
+    // Detect when scrolling near the top to load more messages
+    LaunchedEffect(listState.firstVisibleItemIndex) {
+        if (!isLoadingMessages && hasMoreMessages && listState.firstVisibleItemIndex < 5 && conversationId != null) {
+            isLoadingMessages = true
+            val moreMessages = messagesRepository.getMessagesWithMediaPaginated(
+                conversationId = conversationId!!,
+                limit = pageSize,
+                offset = currentOffset
+            )
+            
+            if (moreMessages.isNotEmpty()) {
+                // Prepend old messages to the beginning
+                val currentScrollIndex = listState.firstVisibleItemIndex
+                messages = moreMessages + messages
+                currentOffset += moreMessages.size
+                
+                // Maintain scroll position
+                coroutineScope.launch {
+                    listState.scrollToItem(currentScrollIndex + moreMessages.size)
+                }
+            }
+            
+            val totalCount = messagesRepository.getMessageCount(conversationId!!)
+            hasMoreMessages = currentOffset < totalCount
+            isLoadingMessages = false
         }
     }
     
@@ -315,7 +365,10 @@ fun ChatScreen(
         topBar = {
             TopAppBar(
                 title = {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        modifier = Modifier.clickable(onClick = onProfileClick)
+                    ) {
                         Box {
                             Box(
                                 modifier = Modifier
@@ -427,6 +480,16 @@ fun ChatScreen(
                                             content = textToSend,
                                             recipientId = contact.id
                                         )
+                                        // Reload the first page to show the new message
+                                        val updatedMessages = messagesRepository.getMessagesWithMediaPaginated(
+                                            conversationId = conversationId!!,
+                                            limit = pageSize,
+                                            offset = 0
+                                        )
+                                        messages = updatedMessages
+                                        currentOffset = updatedMessages.size
+                                        // Scroll to bottom
+                                        listState.animateScrollToItem(messages.size - 1)
                                     } catch (_: Exception) { }
                                 }
                             }
@@ -459,7 +522,21 @@ fun ChatScreen(
                 reverseLayout = false,
                 contentPadding = PaddingValues(vertical = 8.dp)
             ) {
-                items(items = messagesWithMediaFromDb, key = { it.message.id }) { messageWithMedia ->
+                // Show loading indicator at top when loading more messages
+                if (isLoadingMessages && messages.isNotEmpty()) {
+                    item(key = "loading_indicator") {
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(16.dp),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            CircularProgressIndicator(modifier = Modifier.size(24.dp))
+                        }
+                    }
+                }
+                
+                items(items = messages, key = { it.message.id }) { messageWithMedia ->
                     // Use new MessageBubble that supports media
                     com.tcc.tarasulandroid.feature.chat.MessageBubble(
                         messageWithMedia = messageWithMedia,

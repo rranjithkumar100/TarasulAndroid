@@ -144,4 +144,15 @@
     <string name="message_delivered">Delivered</string>
     <string name="message_read">Read</string>
     <string name="message_failed">Failed</string>
+    
+    <!-- Profile Info Screen -->
+    <string name="contact_info">Contact Info</string>
+    <string name="name">Name</string>
+    <string name="phone_number">Phone Number</string>
+    <string name="mobile">Mobile</string>
+    <string name="media_links_docs">Media, Links, and Docs</string>
+    <string name="media">Media</string>
+    <string name="actions">Actions</string>
+    <string name="block_contact">Block Contact</string>
+    <string name="report_contact">Report Contact</string>
 </resources>
