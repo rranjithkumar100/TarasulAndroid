@@ -1,6 +1,8 @@
 package com.tcc.tarasulandroid
 
 import android.net.Uri
+import androidx.compose.animation.*
+import androidx.compose.animation.core.tween
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.navigation.NavType
@@ -94,12 +96,18 @@ fun NavGraph(
             ContactListScreen(navController = navController)
         }
         
-        // Image Preview with zoom and gestures
+        // Image Preview with zoom and gestures + WhatsApp-style fade animation
         composable(
             route = "image_preview/{imagePath}",
             arguments = listOf(
                 navArgument("imagePath") { type = NavType.StringType }
-            )
+            ),
+            enterTransition = {
+                fadeIn(animationSpec = tween(200))
+            },
+            exitTransition = {
+                fadeOut(animationSpec = tween(200))
+            }
         ) { backStackEntry ->
             val encodedPath = backStackEntry.arguments?.getString("imagePath") ?: ""
             val imagePath = Uri.decode(encodedPath)

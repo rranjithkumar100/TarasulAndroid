@@ -1,5 +1,7 @@
 package com.tcc.tarasulandroid.feature.image
 
+import androidx.activity.compose.BackHandler
+import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.detectVerticalDragGestures
@@ -16,6 +18,7 @@ import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.unit.dp
 import coil.compose.SubcomposeAsyncImage
+import kotlinx.coroutines.launch
 import me.saket.telephoto.zoomable.rememberZoomableState
 import me.saket.telephoto.zoomable.zoomable
 import java.io.File
@@ -36,7 +39,9 @@ fun ImagePreviewScreen(
 ) {
     var offsetY by remember { mutableStateOf(0f) }
     var isDragging by remember { mutableStateOf(false) }
+    var isDismissing by remember { mutableStateOf(false) }
     val zoomState = rememberZoomableState()
+    val coroutineScope = rememberCoroutineScope()
     
     // Dismiss threshold: swipe down by 200dp
     val dismissThreshold = 200f
@@ -51,6 +56,14 @@ fun ImagePreviewScreen(
         (1f - (abs(offsetY) / (dismissThreshold * 5))).coerceIn(0.8f, 1f)
     }
     
+    // Handle back button press
+    BackHandler(enabled = !isDismissing) {
+        if (!isDismissing) {
+            isDismissing = true
+            onDismiss()
+        }
+    }
+    
     Box(
         modifier = Modifier
             .fillMaxSize()
@@ -58,19 +71,30 @@ fun ImagePreviewScreen(
             .pointerInput(Unit) {
                 detectVerticalDragGestures(
                     onDragStart = {
-                        // Only allow swipe if not zoomed
-                        if (zoomState.zoomFraction == 0f) {
+                        // Only allow swipe if not zoomed and not dismissing
+                        if (zoomState.zoomFraction == 0f && !isDismissing) {
                             isDragging = true
                         }
                     },
                     onDragEnd = {
-                        if (isDragging) {
+                        if (isDragging && !isDismissing) {
                             if (abs(offsetY) > dismissThreshold) {
                                 // Dismiss if swiped far enough
-                                onDismiss()
+                                isDismissing = true
+                                coroutineScope.launch {
+                                    // Animate to full dismiss
+                                    kotlinx.coroutines.delay(100)
+                                    onDismiss()
+                                }
                             } else {
                                 // Snap back to original position
-                                offsetY = 0f
+                                coroutineScope.launch {
+                                    while (offsetY != 0f) {
+                                        offsetY = (offsetY * 0.8f)
+                                        if (abs(offsetY) < 1f) offsetY = 0f
+                                        kotlinx.coroutines.delay(16)
+                                    }
+                                }
                             }
                             isDragging = false
                         }
@@ -80,7 +104,7 @@ fun ImagePreviewScreen(
                         isDragging = false
                     },
                     onVerticalDrag = { _, dragAmount ->
-                        if (isDragging && zoomState.zoomFraction == 0f) {
+                        if (isDragging && zoomState.zoomFraction == 0f && !isDismissing) {
                             offsetY += dragAmount
                         }
                     }
@@ -91,7 +115,14 @@ fun ImagePreviewScreen(
         TopAppBar(
             title = { },
             navigationIcon = {
-                IconButton(onClick = onDismiss) {
+                IconButton(
+                    onClick = {
+                        if (!isDismissing) {
+                            isDismissing = true
+                            onDismiss()
+                        }
+                    }
+                ) {
                     Icon(
                         Icons.AutoMirrored.Filled.ArrowBack,
                         contentDescription = "Back",
@@ -175,12 +206,4 @@ fun ImagePreviewScreen(
         }
     }
     
-    // Auto-dismiss animation when user releases far down
-    LaunchedEffect(offsetY) {
-        if (abs(offsetY) > dismissThreshold && !isDragging) {
-            // Animate to fully transparent and dismiss
-            kotlinx.coroutines.delay(100)
-            onDismiss()
-        }
-    }
 }
