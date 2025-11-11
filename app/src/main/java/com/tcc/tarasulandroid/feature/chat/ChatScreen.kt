@@ -2,49 +2,64 @@ package com.tcc.tarasulandroid.feature.chat
 
 import android.net.Uri
 import androidx.activity.compose.rememberLauncherForActivityResult
-import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
-import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.automirrored.filled.Send
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
-import androidx.compose.ui.Alignment
+import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.res.painterResource
-import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.unit.dp
-import androidx.compose.foundation.layout.WindowInsets
-import androidx.compose.foundation.layout.ime
-import androidx.compose.foundation.layout.safeDrawing
-import androidx.compose.foundation.layout.windowInsetsPadding
-import com.tcc.tarasulandroid.R
 import com.tcc.tarasulandroid.core.*
-import com.tcc.tarasulandroid.data.db.MessageType
+import com.tcc.tarasulandroid.data.MessageWithMediaAndReply
+import com.tcc.tarasulandroid.feature.chat.components.*
+import com.tcc.tarasulandroid.feature.chat.models.ReplyMessage
 import com.tcc.tarasulandroid.feature.home.model.Contact
 import kotlinx.coroutines.launch
 
+/**
+ * Main chat screen displaying conversation with a contact.
+ *
+ * Architecture:
+ * - Uses extracted components for better maintainability
+ * - Handles permissions, media picking, and message sending
+ * - Implements pagination for message loading
+ * - Supports swipe-to-reply and image preview
+ *
+ * @param contact The contact to chat with
+ * @param onBackClick Callback for back navigation
+ * @param onProfileClick Callback to open profile screen
+ */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ChatScreen(
     contact: Contact,
-    onBackClick: () -> Unit
+    onBackClick: () -> Unit,
+    onProfileClick: () -> Unit = {},
+    onImageClick: (String) -> Unit = {}
 ) {
     val context = LocalContext.current
+    val coroutineScope = rememberCoroutineScope()
+    
+    // State
     var messageText by remember { mutableStateOf("") }
     var showMediaPicker by remember { mutableStateOf(false) }
     var cameraImageUri by remember { mutableStateOf<Uri?>(null) }
-    val coroutineScope = rememberCoroutineScope()
+    var showImagePreview by remember { mutableStateOf(false) }
+    var selectedImagePath by remember { mutableStateOf<String?>(null) }
+    var conversationId by remember { mutableStateOf<String?>(null) }
+    var messages by remember { mutableStateOf<List<MessageWithMediaAndReply>>(emptyList()) }
+    var isLoadingMessages by remember { mutableStateOf(false) }
+    var hasMoreMessages by remember { mutableStateOf(true) }
+    var currentOffset by remember { mutableStateOf(0) }
+    var shouldAutoScroll by remember { mutableStateOf(true) }
+    var replyToMessage by remember { mutableStateOf<ReplyMessage?>(null) }
+    var isFirstLoad by remember { mutableStateOf(true) }
+    var pendingMediaAction by remember { mutableStateOf<String?>(null) }
+    
+    val listState = rememberLazyListState()
+    val pageSize = 20
 
-    // DI
+    // Repository
     val messagesRepository = remember {
         val app = context.applicationContext as com.tcc.tarasulandroid.TarasulApplication
         dagger.hilt.android.EntryPointAccessors.fromApplication(
@@ -53,8 +68,182 @@ fun ChatScreen(
         ).messagesRepository()
     }
 
-    var conversationId by remember { mutableStateOf<String?>(null) }
+    // Permissions
+    val cameraPermissionState = rememberMultiplePermissionsState(
+        permissions = MediaPermissions.getCameraPermissions()
+    )
+    val mediaPermissionsState = rememberMultiplePermissionsState(
+        permissions = MediaPermissions.getMediaPermissions()
+    )
+    val contactsPermissionState = rememberMultiplePermissionsState(
+        permissions = MediaPermissions.getContactsPermissions()
+    )
 
+    // Media launchers
+    val imagePickerLauncher = rememberLauncherForActivityResult(PickImageContract()) { uri ->
+        uri?.let {
+            android.util.Log.d("ChatScreen", "Image picker callback - URI: $uri")
+            try {
+                context.contentResolver.takePersistableUriPermission(
+                    uri,
+                    android.content.Intent.FLAG_GRANT_READ_URI_PERMISSION
+                )
+            } catch (e: Exception) {
+                android.util.Log.e("ChatScreen", "Failed to take persistable permission", e)
+            }
+            
+            conversationId?.let { convId ->
+                coroutineScope.launch {
+                    try {
+                        android.util.Log.d("ChatScreen", "Sending image: $uri")
+                        messagesRepository.sendMediaMessage(
+                            conversationId = convId,
+                            recipientId = contact.id,
+                            mediaUri = uri,
+                            mediaType = com.tcc.tarasulandroid.data.db.MessageType.IMAGE,
+                            caption = replyToMessage?.messageId ?: ""
+                        )
+                        android.util.Log.d("ChatScreen", "Image sent successfully")
+                        reloadMessages(messagesRepository, convId, pageSize) {
+                            messages = it.first
+                            currentOffset = it.second
+                            hasMoreMessages = it.third
+                            isFirstLoad = false
+                            shouldAutoScroll = true
+                        }
+                    } catch (e: Exception) {
+                        android.util.Log.e("ChatScreen", "Error sending image", e)
+                        e.printStackTrace()
+                    }
+                }
+            }
+        }
+    }
+
+    val videoPickerLauncher = rememberLauncherForActivityResult(PickVideoContract()) { uri ->
+        uri?.let {
+            try {
+                context.contentResolver.takePersistableUriPermission(
+                    uri,
+                    android.content.Intent.FLAG_GRANT_READ_URI_PERMISSION
+                )
+            } catch (e: Exception) {
+                android.util.Log.e("ChatScreen", "Failed to take persistable permission", e)
+            }
+            
+            conversationId?.let { convId ->
+                coroutineScope.launch {
+                    try {
+                        messagesRepository.sendMediaMessage(
+                            conversationId = convId,
+                            recipientId = contact.id,
+                            mediaUri = uri,
+                            mediaType = com.tcc.tarasulandroid.data.db.MessageType.VIDEO,
+                            caption = replyToMessage?.messageId ?: ""
+                        )
+                        reloadMessages(messagesRepository, convId, pageSize) {
+                            messages = it.first
+                            currentOffset = it.second
+                            hasMoreMessages = it.third
+                            isFirstLoad = false
+                            shouldAutoScroll = true
+                        }
+                    } catch (e: Exception) {
+                        android.util.Log.e("ChatScreen", "Error sending video", e)
+                        e.printStackTrace()
+                    }
+                }
+            }
+        }
+    }
+
+    val filePickerLauncher = rememberLauncherForActivityResult(PickFileContract()) { uri ->
+        uri?.let {
+            conversationId?.let { convId ->
+                coroutineScope.launch {
+                    try {
+                        messagesRepository.sendMediaMessage(
+                            conversationId = convId,
+                            recipientId = contact.id,
+                            mediaUri = uri,
+                            mediaType = com.tcc.tarasulandroid.data.db.MessageType.FILE,
+                            caption = replyToMessage?.messageId ?: ""
+                        )
+                        reloadMessages(messagesRepository, convId, pageSize) {
+                            messages = it.first
+                            currentOffset = it.second
+                            hasMoreMessages = it.third
+                            isFirstLoad = false
+                            shouldAutoScroll = true
+                        }
+                    } catch (e: Exception) {
+                        android.util.Log.e("ChatScreen", "Error sending file", e)
+                        e.printStackTrace()
+                    }
+                }
+            }
+        }
+    }
+
+    val cameraLauncher = rememberLauncherForActivityResult(
+        contract = androidx.activity.result.contract.ActivityResultContracts.TakePicture()
+    ) { success ->
+        if (success && cameraImageUri != null) {
+            conversationId?.let { convId ->
+                coroutineScope.launch {
+                    try {
+                        messagesRepository.sendMediaMessage(
+                            conversationId = convId,
+                            recipientId = contact.id,
+                            mediaUri = cameraImageUri!!,
+                            mediaType = com.tcc.tarasulandroid.data.db.MessageType.IMAGE,
+                            caption = replyToMessage?.messageId ?: ""
+                        )
+                        reloadMessages(messagesRepository, convId, pageSize) {
+                            messages = it.first
+                            currentOffset = it.second
+                            hasMoreMessages = it.third
+                            isFirstLoad = false
+                            shouldAutoScroll = true
+                        }
+                    } catch (e: Exception) {
+                        android.util.Log.e("ChatScreen", "Error sending camera image", e)
+                        e.printStackTrace()
+                    }
+                }
+            }
+        }
+    }
+
+    val contactPickerLauncher = rememberLauncherForActivityResult(PickContactContract()) { uri ->
+        uri?.let {
+            conversationId?.let { convId ->
+                coroutineScope.launch {
+                    try {
+                        messagesRepository.sendMediaMessage(
+                            conversationId = convId,
+                            recipientId = contact.id,
+                            mediaUri = uri,
+                            mediaType = com.tcc.tarasulandroid.data.db.MessageType.CONTACT,
+                            caption = replyToMessage?.messageId ?: ""
+                        )
+                        reloadMessages(messagesRepository, convId, pageSize) {
+                            messages = it.first
+                            currentOffset = it.second
+                            hasMoreMessages = it.third
+                            isFirstLoad = false
+                            shouldAutoScroll = true
+                        }
+                    } catch (e: Exception) {
+                        android.util.Log.e("ChatScreen", "Error sending contact", e)
+                        e.printStackTrace()
+                    }
+                }
+            }
+        }
+    }
+
+    // Load conversation and messages
     LaunchedEffect(contact.id) {
         try {
             val conversation = messagesRepository.getOrCreateConversation(
@@ -63,223 +252,88 @@ fun ChatScreen(
                 contactPhoneNumber = ""
             )
             conversationId = conversation.id
-        } catch (_: Exception) {}
-    }
 
-    // Fetch messages with media data
-    val messagesWithMediaFromDb by messagesRepository
-        .getMessagesWithMediaForConversation(conversationId ?: "")
-        .collectAsState(initial = emptyList())
-
-    val listState = rememberLazyListState()
-
-    LaunchedEffect(messagesWithMediaFromDb.size) {
-        if (messagesWithMediaFromDb.isNotEmpty()) {
-            listState.animateScrollToItem(messagesWithMediaFromDb.size - 1)
-        }
-    }
-    
-    // Track what was clicked (to relaunch after permission granted)
-    var pendingMediaAction by remember { mutableStateOf<String?>(null) }
-    
-    // Permission states
-    val cameraPermissionState = rememberMultiplePermissionsState(
-        permissions = MediaPermissions.getCameraPermissions()
-    )
-    
-    val mediaPermissionsState = rememberMultiplePermissionsState(
-        permissions = MediaPermissions.getMediaPermissions()
-    )
-    
-    val contactsPermissionState = rememberMultiplePermissionsState(
-        permissions = MediaPermissions.getContactsPermissions()
-    )
-    
-    // Media picker launchers
-    val imagePickerLauncher = rememberLauncherForActivityResult(
-        contract = PickImageContract()
-    ) { uri ->
-        android.util.Log.d("ChatScreen", "Image picker callback - URI: $uri")
-        if (uri == null) {
-            android.util.Log.w("ChatScreen", "Image picker returned null URI (cancelled or error)")
-            return@rememberLauncherForActivityResult
-        }
-        
-        coroutineScope.launch {
-            try {
-                android.util.Log.d("ChatScreen", "Sending image: $uri")
-                android.util.Log.d("ChatScreen", "ConversationId: $conversationId, ContactId: ${contact.id}")
-                
-                messagesRepository.sendMediaMessage(
-                    conversationId = conversationId ?: return@launch,
-                    recipientId = contact.id,
-                    mediaType = MessageType.IMAGE,
-                    mediaUri = uri,
-                    mimeType = context.contentResolver.getType(uri),
-                    fileName = MediaPickerHelper.getFileName(context, uri)
+            if (conversationId != null) {
+                isLoadingMessages = true
+                val initialMessages = messagesRepository.getMessagesWithMediaAndReplyPaginated(
+                    conversationId = conversationId!!,
+                    limit = pageSize,
+                    offset = 0
                 )
-                android.util.Log.d("ChatScreen", "Image sent successfully")
-            } catch (e: Exception) {
-                android.util.Log.e("ChatScreen", "Error sending image", e)
-            }
-        }
-    }
-    
-    val videoPickerLauncher = rememberLauncherForActivityResult(
-        contract = PickVideoContract()
-    ) { uri ->
-        android.util.Log.d("ChatScreen", "Video picker callback - URI: $uri")
-        if (uri == null) {
-            android.util.Log.w("ChatScreen", "Video picker returned null URI (cancelled or error)")
-            return@rememberLauncherForActivityResult
-        }
-        
-        coroutineScope.launch {
-            try {
-                android.util.Log.d("ChatScreen", "Sending video: $uri")
-                android.util.Log.d("ChatScreen", "ConversationId: $conversationId, ContactId: ${contact.id}")
+                messages = initialMessages
+                currentOffset = initialMessages.size
                 
-                messagesRepository.sendMediaMessage(
-                    conversationId = conversationId ?: return@launch,
-                    recipientId = contact.id,
-                    mediaType = MessageType.VIDEO,
-                    mediaUri = uri,
-                    mimeType = context.contentResolver.getType(uri),
-                    fileName = MediaPickerHelper.getFileName(context, uri)
-                )
-                android.util.Log.d("ChatScreen", "Video sent successfully")
-            } catch (e: Exception) {
-                android.util.Log.e("ChatScreen", "Error sending video", e)
+                val totalCount = messagesRepository.getMessageCount(conversationId!!)
+                hasMoreMessages = currentOffset < totalCount
+                
+                isLoadingMessages = false
+                shouldAutoScroll = true
             }
+        } catch (e: Exception) {
+            android.util.Log.e("ChatScreen", "Error loading conversation", e)
+            isLoadingMessages = false
         }
     }
-    
-    val filePickerLauncher = rememberLauncherForActivityResult(
-        contract = PickFileContract()
-    ) { uri ->
-        uri?.let { 
-            coroutineScope.launch {
-                try {
-                    messagesRepository.sendMediaMessage(
-                        conversationId = conversationId ?: return@launch,
-                        recipientId = contact.id,
-                        mediaType = MessageType.FILE,
-                        mediaUri = it,
-                        mimeType = context.contentResolver.getType(it),
-                        fileName = MediaPickerHelper.getFileName(context, it)
-                    )
-                } catch (e: Exception) {
-                    // Handle error
-                }
-            }
-        }
-    }
-    
-    val cameraLauncher = rememberLauncherForActivityResult(
-        contract = TakePhotoContract()
-    ) { _ ->
-        cameraImageUri?.let { uri ->
-            coroutineScope.launch {
-                try {
-                    messagesRepository.sendMediaMessage(
-                        conversationId = conversationId ?: return@launch,
-                        recipientId = contact.id,
-                        mediaType = MessageType.IMAGE,
-                        mediaUri = uri,
-                        mimeType = "image/jpeg",
-                        fileName = "camera_${System.currentTimeMillis()}.jpg"
-                    )
-                } catch (e: Exception) {
-                    // Handle error
-                }
-            }
-        }
-    }
-    
-    val contactPickerLauncher = rememberLauncherForActivityResult(
-        contract = PickContactContract()
-    ) { uri ->
-        uri?.let {
-            // Clear focus from TextField to prevent crash
-            coroutineScope.launch {
-                try {
-                    // Extract full contact info
-                    var contactName = "Unknown Contact"
-                    var contactId: String? = null
-                    val phoneNumbers = mutableListOf<String>()
-                    
-                    // Query contact basic info
-                    context.contentResolver.query(
-                        uri,
-                        arrayOf(
-                            android.provider.ContactsContract.Contacts._ID,
-                            android.provider.ContactsContract.Contacts.DISPLAY_NAME,
-                            android.provider.ContactsContract.Contacts.HAS_PHONE_NUMBER
-                        ),
-                        null, null, null
-                    )?.use { cursor ->
-                        if (cursor.moveToFirst()) {
-                            val idIndex = cursor.getColumnIndex(android.provider.ContactsContract.Contacts._ID)
-                            val nameIndex = cursor.getColumnIndex(android.provider.ContactsContract.Contacts.DISPLAY_NAME)
+
+    // Pagination detection
+    LaunchedEffect(listState) {
+        snapshotFlow { listState.firstVisibleItemIndex }
+            .collect { firstVisibleIndex ->
+                if (firstVisibleIndex >= messages.size - 3 && hasMoreMessages && !isLoadingMessages) {
+                    isLoadingMessages = true
+                    conversationId?.let { convId ->
+                        try {
+                            val olderMessages = messagesRepository.getMessagesWithMediaAndReplyPaginated(
+                                conversationId = convId,
+                                limit = pageSize,
+                                offset = currentOffset
+                            )
                             
-                            if (idIndex >= 0) contactId = cursor.getString(idIndex)
-                            if (nameIndex >= 0) contactName = cursor.getString(nameIndex)
-                        }
-                    }
-                    
-                    // Query phone numbers
-                    contactId?.let { id ->
-                        context.contentResolver.query(
-                            android.provider.ContactsContract.CommonDataKinds.Phone.CONTENT_URI,
-                            arrayOf(android.provider.ContactsContract.CommonDataKinds.Phone.NUMBER),
-                            "${android.provider.ContactsContract.CommonDataKinds.Phone.CONTACT_ID} = ?",
-                            arrayOf(id),
-                            null
-                        )?.use { cursor ->
-                            val phoneIndex = cursor.getColumnIndex(android.provider.ContactsContract.CommonDataKinds.Phone.NUMBER)
-                            while (cursor.moveToNext() && phoneIndex >= 0) {
-                                phoneNumbers.add(cursor.getString(phoneIndex))
+                            if (olderMessages.isNotEmpty()) {
+                                messages = messages + olderMessages
+                                currentOffset += olderMessages.size
+                                
+                                val totalCount = messagesRepository.getMessageCount(convId)
+                                hasMoreMessages = currentOffset < totalCount
+                            } else {
+                                hasMoreMessages = false
                             }
+                        } catch (e: Exception) {
+                            android.util.Log.e("ChatScreen", "Error loading more messages", e)
+                        } finally {
+                            isLoadingMessages = false
                         }
                     }
-                    
-                    // Create contact info JSON
-                    val contactInfo = com.tcc.tarasulandroid.data.ContactInfo(
-                        name = contactName,
-                        phoneNumbers = phoneNumbers,
-                        photoUri = uri.toString()
-                    )
-                    
-                    // Send as contact message with proper type
-                    messagesRepository.sendContactMessage(
-                        conversationId = conversationId ?: return@launch,
-                        contactInfo = contactInfo,
-                        recipientId = contact.id
-                    )
-                } catch (e: Exception) {
-                    android.util.Log.e("ChatScreen", "Error sending contact", e)
                 }
+            }
+    }
+
+    // Auto-scroll
+    LaunchedEffect(messages.size, shouldAutoScroll) {
+        if (messages.isNotEmpty() && shouldAutoScroll) {
+            try {
+                kotlinx.coroutines.delay(50)
+                if (isFirstLoad) {
+                    listState.scrollToItem(messages.size - 1)
+                    isFirstLoad = false
+                } else {
+                    listState.animateScrollToItem(messages.size - 1)
+                }
+                shouldAutoScroll = false
+            } catch (e: Exception) {
+                android.util.Log.e("ChatScreen", "Error scrolling", e)
+                shouldAutoScroll = false
             }
         }
     }
-    
-    // Watch for permission grants and auto-launch pickers
-    LaunchedEffect(
-        cameraPermissionState.allPermissionsGranted,
-        mediaPermissionsState.allPermissionsGranted,
-        contactsPermissionState.allPermissionsGranted,
-        pendingMediaAction
-    ) {
-        android.util.Log.d("ChatScreen", "Permission state changed:")
-        android.util.Log.d("ChatScreen", "  - Pending: $pendingMediaAction")
-        android.util.Log.d("ChatScreen", "  - Camera granted: ${cameraPermissionState.allPermissionsGranted}")
-        android.util.Log.d("ChatScreen", "  - Media granted: ${mediaPermissionsState.allPermissionsGranted}")
-        android.util.Log.d("ChatScreen", "  - Contacts granted: ${contactsPermissionState.allPermissionsGranted}")
+
+    // Handle pending permission results
+    LaunchedEffect(pendingMediaAction, cameraPermissionState.allPermissionsGranted, 
+        mediaPermissionsState.allPermissionsGranted, contactsPermissionState.allPermissionsGranted) {
         
         when (pendingMediaAction) {
             "camera" -> {
                 if (cameraPermissionState.allPermissionsGranted) {
-                    android.util.Log.d("ChatScreen", "Permission granted, launching camera")
                     cameraImageUri = MediaPickerHelper.createTempImageUri(context)
                     cameraImageUri?.let { cameraLauncher.launch(it) }
                     pendingMediaAction = null
@@ -287,21 +341,18 @@ fun ChatScreen(
             }
             "gallery" -> {
                 if (mediaPermissionsState.allPermissionsGranted) {
-                    android.util.Log.d("ChatScreen", "Permission granted, launching image picker")
                     imagePickerLauncher.launch(Unit)
                     pendingMediaAction = null
                 }
             }
             "video" -> {
                 if (mediaPermissionsState.allPermissionsGranted) {
-                    android.util.Log.d("ChatScreen", "Permission granted, launching video picker")
                     videoPickerLauncher.launch(Unit)
                     pendingMediaAction = null
                 }
             }
             "contact" -> {
                 if (contactsPermissionState.allPermissionsGranted) {
-                    android.util.Log.d("ChatScreen", "Permission granted, launching contact picker")
                     contactPickerLauncher.launch(Unit)
                     pendingMediaAction = null
                 }
@@ -311,227 +362,127 @@ fun ChatScreen(
 
     Scaffold(
         modifier = Modifier.fillMaxSize(),
-        // Use default insets for top (safe choice). We’ll handle bottom/IME in bottomBar only.
         topBar = {
-            TopAppBar(
-                title = {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Box {
-                            Box(
-                                modifier = Modifier
-                                    .size(40.dp)
-                                    .clip(CircleShape)
-                                    .background(MaterialTheme.colorScheme.primaryContainer),
-                                contentAlignment = Alignment.Center
-                            ) {
-                                Text(
-                                    text = contact.name.first().toString(),
-                                    style = MaterialTheme.typography.titleMedium,
-                                    color = MaterialTheme.colorScheme.onPrimaryContainer,
-                                    fontWeight = FontWeight.Bold
-                                )
-                            }
-                            if (contact.isOnline) {
-                                Box(
-                                    modifier = Modifier
-                                        .size(12.dp)
-                                        .clip(CircleShape)
-                                        .background(MaterialTheme.colorScheme.primary)
-                                        .align(Alignment.BottomEnd)
-                                )
-                            }
-                        }
-                        Spacer(modifier = Modifier.width(12.dp))
-                        Column {
-                            Text(
-                                text = contact.name,
-                                style = MaterialTheme.typography.titleMedium,
-                                fontWeight = FontWeight.SemiBold
-                            )
-                            Text(
-                                text = if (contact.isOnline)
-                                    stringResource(R.string.online)
-                                else
-                                    stringResource(R.string.offline),
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                        }
-                    }
-                },
-                navigationIcon = {
-                    IconButton(onClick = onBackClick) {
-                        Icon(
-                            Icons.AutoMirrored.Filled.ArrowBack,
-                            contentDescription = "Back"
-                        )
-                    }
-                },
-                colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.surface
-                )
+            ChatTopBar(
+                contact = contact,
+                onBackClick = onBackClick,
+                onProfileClick = onProfileClick
             )
         },
         bottomBar = {
-            // ⬇️ This is the key: imePadding() for keyboard, safeDrawing bottom for gestures when keyboard hidden
-            Surface(
-                shadowElevation = 8.dp,
-                color = MaterialTheme.colorScheme.surface,
+            Column(
                 modifier = Modifier
-                    .imePadding()
-                    .windowInsetsPadding(
-                        WindowInsets.safeDrawing.only(WindowInsetsSides.Bottom)
-                    )
+                    .fillMaxWidth()
+                    .windowInsetsPadding(WindowInsets.ime)
+                    .windowInsetsPadding(WindowInsets.safeDrawing)
             ) {
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 8.dp, vertical = 8.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    // Attachment button
-                    IconButton(
-                        onClick = { showMediaPicker = true }
-                    ) {
-                        Icon(
-                            painter = painterResource(id = R.drawable.ic_attach),
-                            contentDescription = stringResource(R.string.attach_media),
-                            tint = MaterialTheme.colorScheme.primary
-                        )
-                    }
-                    
-                    TextField(
-                        value = messageText,
-                        onValueChange = { messageText = it },
-                        modifier = Modifier.weight(1f),
-                        placeholder = { Text(stringResource(R.string.type_message)) },
-                        colors = TextFieldDefaults.colors(
-                            focusedIndicatorColor = MaterialTheme.colorScheme.primary,
-                            unfocusedIndicatorColor = MaterialTheme.colorScheme.outline,
-                            focusedContainerColor = MaterialTheme.colorScheme.surfaceVariant,
-                            unfocusedContainerColor = MaterialTheme.colorScheme.surfaceVariant
-                        ),
-                        shape = RoundedCornerShape(24.dp),
-                        maxLines = 4
-                    )
-                    Spacer(modifier = Modifier.width(8.dp))
-                    FloatingActionButton(
-                        onClick = {
-                            if (messageText.isNotBlank() && conversationId != null) {
-                                val textToSend = messageText.trim()
-                                messageText = ""
-                                coroutineScope.launch {
-                                    try {
-                                        messagesRepository.sendMessage(
-                                            conversationId = conversationId!!,
-                                            content = textToSend,
-                                            recipientId = contact.id
-                                        )
-                                    } catch (_: Exception) { }
+                ChatInputField(
+                    messageText = messageText,
+                    onMessageTextChange = { messageText = it },
+                    onSendClick = {
+                        if (messageText.isNotBlank() && conversationId != null) {
+                            coroutineScope.launch {
+                                try {
+                                    messagesRepository.sendMessage(
+                                        conversationId = conversationId!!,
+                                        recipientId = contact.id,
+                                        content = messageText,
+                                        replyToMessageId = replyToMessage?.messageId
+                                    )
+                                    messageText = ""
+                                    replyToMessage = null
+                                    
+                                    reloadMessages(messagesRepository, conversationId!!, pageSize) {
+                                        messages = it.first
+                                        currentOffset = it.second
+                                        hasMoreMessages = it.third
+                                        isFirstLoad = false
+                                        shouldAutoScroll = true
+                                    }
+                                } catch (e: Exception) {
+                                    android.util.Log.e("ChatScreen", "Error sending message", e)
                                 }
                             }
-                        },
-                        modifier = Modifier.size(48.dp),
-                        containerColor = MaterialTheme.colorScheme.primary
-                    ) {
-                        Icon(
-                            Icons.AutoMirrored.Filled.Send,
-                            contentDescription = stringResource(R.string.send),
-                            tint = MaterialTheme.colorScheme.onPrimary
-                        )
-                    }
-                }
-            }
-        }
-    ) { padding ->
-        // Content area — no IME/nav paddings here
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(padding)
-        ) {
-            LazyColumn(
-                modifier = Modifier
-                    .weight(1f)
-                    .fillMaxWidth()
-                    .padding(horizontal = 16.dp),
-                state = listState,
-                reverseLayout = false,
-                contentPadding = PaddingValues(vertical = 8.dp)
-            ) {
-                items(items = messagesWithMediaFromDb, key = { it.message.id }) { messageWithMedia ->
-                    // Use new MessageBubble that supports media
-                    com.tcc.tarasulandroid.feature.chat.MessageBubble(
-                        messageWithMedia = messageWithMedia,
-                        onDownloadClick = { mediaId ->
-                            coroutineScope.launch {
-                                messagesRepository.downloadMedia(mediaId)
-                            }
                         }
-                    )
-                    Spacer(modifier = Modifier.height(8.dp))
-                }
+                    },
+                    onAttachClick = { showMediaPicker = true },
+                    replyToMessage = replyToMessage,
+                    onCancelReply = { replyToMessage = null }
+                )
             }
         }
+    ) { paddingValues ->
+        ChatMessagesList(
+            messages = messages,
+            listState = listState,
+            isLoadingMore = isLoadingMessages,
+            onReply = { messageWithMedia ->
+                replyToMessage = messageWithMedia.toReplyMessage(contact.name)
+            },
+            onDownloadClick = { mediaId ->
+                coroutineScope.launch {
+                    messagesRepository.downloadMedia(mediaId)
+                }
+            },
+            onImageClick = { imagePath ->
+                selectedImagePath = imagePath
+                showImagePreview = true
+            },
+            modifier = Modifier.padding(paddingValues)
+        )
     }
-    
+
     // Media picker bottom sheet
     if (showMediaPicker) {
         MediaPickerBottomSheet(
             onDismiss = { showMediaPicker = false },
             onCameraClick = {
-                android.util.Log.d("ChatScreen", "Camera clicked")
+                showMediaPicker = false
                 if (cameraPermissionState.allPermissionsGranted) {
-                    android.util.Log.d("ChatScreen", "Launching camera")
                     cameraImageUri = MediaPickerHelper.createTempImageUri(context)
                     cameraImageUri?.let { cameraLauncher.launch(it) }
                 } else {
-                    android.util.Log.d("ChatScreen", "Requesting camera permission")
                     pendingMediaAction = "camera"
                     cameraPermissionState.requestPermissions()
                 }
             },
             onGalleryClick = {
-                android.util.Log.d("ChatScreen", "Gallery clicked")
-                android.util.Log.d("ChatScreen", "Media permissions granted: ${mediaPermissionsState.allPermissionsGranted}")
-                
-                if (mediaPermissionsState.allPermissionsGranted) {
-                    android.util.Log.d("ChatScreen", "Launching image picker")
+                showMediaPicker = false
+                if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.TIRAMISU) {
                     imagePickerLauncher.launch(Unit)
                 } else {
-                    android.util.Log.d("ChatScreen", "Requesting media permissions")
-                    pendingMediaAction = "gallery"
-                    mediaPermissionsState.requestPermissions()
+                    if (mediaPermissionsState.allPermissionsGranted) {
+                        imagePickerLauncher.launch(Unit)
+                    } else {
+                        pendingMediaAction = "gallery"
+                        mediaPermissionsState.requestPermissions()
+                    }
                 }
             },
             onVideoClick = {
-                android.util.Log.d("ChatScreen", "Video clicked")
-                android.util.Log.d("ChatScreen", "Media permissions granted: ${mediaPermissionsState.allPermissionsGranted}")
-                
-                if (mediaPermissionsState.allPermissionsGranted) {
-                    android.util.Log.d("ChatScreen", "Launching video picker")
+                showMediaPicker = false
+                if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.TIRAMISU) {
                     videoPickerLauncher.launch(Unit)
                 } else {
-                    android.util.Log.d("ChatScreen", "Requesting media permissions")
-                    pendingMediaAction = "video"
-                    mediaPermissionsState.requestPermissions()
+                    if (mediaPermissionsState.allPermissionsGranted) {
+                        videoPickerLauncher.launch(Unit)
+                    } else {
+                        pendingMediaAction = "video"
+                        mediaPermissionsState.requestPermissions()
+                    }
                 }
             },
             onFileClick = {
+                showMediaPicker = false
                 filePickerLauncher.launch("*/*")
             },
             onContactClick = {
-                android.util.Log.d("ChatScreen", "Contact clicked")
-                // Dismiss bottom sheet first
                 showMediaPicker = false
-                // Launch contact picker after a short delay to avoid TextField issues
                 coroutineScope.launch {
                     kotlinx.coroutines.delay(100)
                     if (contactsPermissionState.allPermissionsGranted) {
-                        android.util.Log.d("ChatScreen", "Launching contact picker")
                         contactPickerLauncher.launch(Unit)
                     } else {
-                        android.util.Log.d("ChatScreen", "Requesting contacts permission")
                         pendingMediaAction = "contact"
                         contactsPermissionState.requestPermissions()
                     }
@@ -539,6 +490,57 @@ fun ChatScreen(
             }
         )
     }
+    
+    // Image preview dialog
+    if (showImagePreview && selectedImagePath != null) {
+        com.tcc.tarasulandroid.feature.image.ImagePreviewDialog(
+            imagePath = selectedImagePath!!,
+            onDismiss = {
+                showImagePreview = false
+                selectedImagePath = null
+            }
+        )
+    }
 }
 
-// Old MessageBubble removed - now using the one from MessageBubble.kt that supports media
+/**
+ * Helper function to reload messages after sending.
+ */
+private suspend fun reloadMessages(
+    messagesRepository: com.tcc.tarasulandroid.data.MessagesRepository,
+    conversationId: String,
+    pageSize: Int,
+    onResult: (Triple<List<MessageWithMediaAndReply>, Int, Boolean>) -> Unit
+) {
+    try {
+        val updatedMessages = messagesRepository.getMessagesWithMediaAndReplyPaginated(
+            conversationId = conversationId,
+            limit = pageSize,
+            offset = 0
+        )
+        val totalCount = messagesRepository.getMessageCount(conversationId)
+        val hasMore = updatedMessages.size < totalCount
+        
+        onResult(Triple(updatedMessages, updatedMessages.size, hasMore))
+    } catch (e: Exception) {
+        android.util.Log.e("ChatScreen", "Error reloading messages", e)
+    }
+}
+
+/**
+ * Extension to convert message to reply format.
+ */
+private fun MessageWithMediaAndReply.toReplyMessage(contactName: String): ReplyMessage {
+    val senderName = if (message.direction == com.tcc.tarasulandroid.data.db.MessageDirection.OUTGOING) {
+        "You"
+    } else {
+        contactName
+    }
+
+    return ReplyMessage(
+        messageId = message.id,
+        senderName = senderName,
+        content = message.content,
+        messageType = message.type
+    )
+}

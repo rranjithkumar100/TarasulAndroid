@@ -25,6 +25,17 @@ interface MessagesDao {
     @Query("SELECT * FROM messages WHERE conversationId = :conversationId ORDER BY timestamp ASC")
     suspend fun getMessagesForConversationSync(conversationId: String): List<MessageEntity>
     
+    @androidx.room.Transaction
+    @Query("SELECT * FROM messages WHERE conversationId = :conversationId ORDER BY timestamp DESC LIMIT :limit OFFSET :offset")
+    suspend fun getMessagesWithMediaPaginated(conversationId: String, limit: Int, offset: Int): List<com.tcc.tarasulandroid.data.MessageWithMedia>
+    
+    @androidx.room.Transaction
+    @Query("SELECT * FROM messages WHERE conversationId = :conversationId ORDER BY timestamp DESC LIMIT :limit OFFSET :offset")
+    suspend fun getMessagesWithMediaAndReplyPaginated(conversationId: String, limit: Int, offset: Int): List<com.tcc.tarasulandroid.data.MessageWithMediaAndReply>
+    
+    @Query("SELECT COUNT(*) FROM messages WHERE conversationId = :conversationId")
+    suspend fun getMessageCount(conversationId: String): Int
+    
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertMessage(message: MessageEntity)
     

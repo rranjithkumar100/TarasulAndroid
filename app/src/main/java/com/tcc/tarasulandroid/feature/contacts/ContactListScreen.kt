@@ -286,41 +286,37 @@ private fun ContactsList(
     onContactClick: (DeviceContact) -> Unit
 ) {
     Box(modifier = Modifier.fillMaxSize()) {
-        if (isSearching) {
-            // Show loading indicator while searching
-            CircularProgressIndicator(
-                modifier = Modifier
-                    .align(Alignment.Center)
-                    .size(40.dp)
-            )
-        } else if (contacts.isEmpty() && searchQuery.isNotBlank()) {
-            // No search results
-            EmptySearchResults(searchQuery = searchQuery)
-        } else {
-            // Optimized LazyColumn for large lists
-            LazyColumn(
-                modifier = Modifier.fillMaxSize(),
-                contentPadding = PaddingValues(vertical = 8.dp)
-            ) {
-                // Show sync indicator at top if syncing
-                if (isSyncing) {
-                    item {
-                        LinearProgressIndicator(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(horizontal = 16.dp, vertical = 8.dp)
+        when {
+            contacts.isEmpty() && searchQuery.isNotBlank() && !isSearching -> {
+                // No search results
+                EmptySearchResults(searchQuery = searchQuery)
+            }
+            else -> {
+                // Optimized LazyColumn for large lists
+                LazyColumn(
+                    modifier = Modifier.fillMaxSize(),
+                    contentPadding = PaddingValues(vertical = 8.dp)
+                ) {
+                    // Show sync indicator at top if syncing
+                    if (isSyncing) {
+                        item(key = "sync_indicator") {
+                            LinearProgressIndicator(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(horizontal = 16.dp, vertical = 8.dp)
+                            )
+                        }
+                    }
+                    
+                    items(
+                        items = contacts,
+                        key = { it.id }
+                    ) { contact ->
+                        ContactListItem(
+                            contact = contact,
+                            onClick = { onContactClick(contact) }
                         )
                     }
-                }
-                
-                items(
-                    items = contacts,
-                    key = { it.id }
-                ) { contact ->
-                    ContactListItem(
-                        contact = contact,
-                        onClick = { onContactClick(contact) }
-                    )
                 }
             }
         }

@@ -106,6 +106,12 @@ dependencies {
     // Kotlinx Serialization
     implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.6.0")
     
+    // Accompanist for swipe gestures
+    implementation("com.google.accompanist:accompanist-permissions:0.32.0")
+    
+    // Zoomable image for full-screen preview with pinch-to-zoom
+    implementation("me.saket.telephoto:zoomable-image-coil:0.7.1")
+    
     testImplementation(libs.junit)
     testImplementation(libs.mockwebserver)
     testImplementation(libs.kotlinx.coroutines.test)

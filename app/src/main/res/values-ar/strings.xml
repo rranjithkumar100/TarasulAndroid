@@ -130,6 +130,8 @@
     <string name="download_failed">فشل التنزيل</string>
     <string name="downloading">جارٍ التنزيل...</string>
     <string name="download_progress">%d%%</string>
+    <string name="play_video">تشغيل الفيديو</string>
+    <string name="video_not_found">لم يتم العثور على ملف الفيديو. ربما تم حذفه.</string>
     
     <!-- Contact Card -->
     <string name="message_contact">مراسلة جهة الاتصال</string>
@@ -144,4 +146,15 @@
     <string name="message_delivered">تم التوصيل</string>
     <string name="message_read">تمت القراءة</string>
     <string name="message_failed">فشل</string>
+    
+    <!-- Profile Info Screen -->
+    <string name="contact_info">معلومات جهة الاتصال</string>
+    <string name="name">الاسم</string>
+    <string name="phone_number">رقم الهاتف</string>
+    <string name="mobile">الجوال</string>
+    <string name="media_links_docs">الوسائط والروابط والمستندات</string>
+    <string name="media">الوسائط</string>
+    <string name="actions">الإجراءات</string>
+    <string name="block_contact">حظر جهة الاتصال</string>
+    <string name="report_contact">الإبلاغ عن جهة الاتصال</string>
 </resources>

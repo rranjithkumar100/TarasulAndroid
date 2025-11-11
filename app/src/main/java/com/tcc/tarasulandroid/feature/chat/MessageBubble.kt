@@ -1,6 +1,8 @@
 package com.tcc.tarasulandroid.feature.chat
 
+import android.content.Intent
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -8,8 +10,12 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.BlurredEdgeTreatment
+import androidx.compose.ui.draw.blur
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
@@ -19,6 +25,7 @@ import com.tcc.tarasulandroid.R
 import com.tcc.tarasulandroid.data.MessageWithMedia
 import com.tcc.tarasulandroid.data.db.DownloadStatus
 import com.tcc.tarasulandroid.data.db.MessageType
+import com.tcc.tarasulandroid.feature.video.VideoPlayerActivity
 import java.io.File
 import java.text.SimpleDateFormat
 import java.util.*
@@ -27,7 +34,8 @@ import java.util.*
 fun MessageBubble(
     messageWithMedia: MessageWithMedia,
     modifier: Modifier = Modifier,
-    onDownloadClick: (String) -> Unit = {}
+    onDownloadClick: (String) -> Unit = {},
+    onImageClick: (String) -> Unit = {}
 ) {
     val message = messageWithMedia.message
     val media = messageWithMedia.media
@@ -52,7 +60,7 @@ fun MessageBubble(
                 // Render media content based on type
                 when (message.type) {
                     MessageType.IMAGE -> {
-                        ImageMessageContent(media, onDownloadClick)
+                        ImageMessageContent(media, onDownloadClick, onImageClick)
                     }
                     MessageType.VIDEO -> {
                         VideoMessageContent(media, onDownloadClick)
@@ -101,7 +109,8 @@ fun MessageBubble(
 @Composable
 private fun ImageMessageContent(
     media: com.tcc.tarasulandroid.data.db.MediaEntity?,
-    onDownloadClick: (String) -> Unit
+    onDownloadClick: (String) -> Unit,
+    onImageClick: (String) -> Unit
 ) {
     if (media == null) return
     
@@ -117,7 +126,9 @@ private fun ImageMessageContent(
                     AsyncImage(
                         model = File(media.localPath),
                         contentDescription = stringResource(R.string.image_message),
-                        modifier = Modifier.fillMaxSize(),
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .clickable { onImageClick(media.localPath) },
                         contentScale = ContentScale.Crop
                     )
                 }
@@ -181,28 +192,146 @@ private fun VideoMessageContent(
 ) {
     if (media == null) return
     
+    val context = LocalContext.current
+    val videoFile = media.localPath?.let { File(it) }
+    val canPlay = media.downloadStatus == DownloadStatus.DONE && 
+                  videoFile != null && 
+                  videoFile.exists()
+    
     Box(
         modifier = Modifier
             .fillMaxWidth()
             .height(200.dp)
             .clip(RoundedCornerShape(8.dp))
-            .background(MaterialTheme.colorScheme.surfaceVariant),
+            .background(MaterialTheme.colorScheme.surfaceVariant)
+            .clickable(enabled = canPlay) {
+                if (canPlay && videoFile != null) {
+                    // Check if file still exists
+                    if (!videoFile.exists()) {
+                        android.widget.Toast.makeText(
+                            context,
+                            context.getString(R.string.video_not_found),
+                            android.widget.Toast.LENGTH_SHORT
+                        ).show()
+                        return@clickable
+                    }
+                    
+                    // Launch video player
+                    val intent = Intent(context, VideoPlayerActivity::class.java).apply {
+                        putExtra(VideoPlayerActivity.EXTRA_VIDEO_PATH, videoFile.absolutePath)
+                        putExtra(VideoPlayerActivity.EXTRA_VIDEO_NAME, media.fileName ?: "Video")
+                    }
+                    context.startActivity(intent)
+                }
+            },
         contentAlignment = Alignment.Center
     ) {
-        // Show thumbnail or video placeholder
+        // Blurred background thumbnail (WhatsApp style)
         if (media.thumbnailPath != null && File(media.thumbnailPath).exists()) {
+            // Background: Blurred thumbnail
             AsyncImage(
                 model = File(media.thumbnailPath),
-                contentDescription = stringResource(R.string.video_thumbnail),
-                modifier = Modifier.fillMaxSize(),
+                contentDescription = null,
+                modifier = Modifier
+                    .fillMaxSize()
+                    .blur(
+                        radius = 20.dp,
+                        edgeTreatment = BlurredEdgeTreatment.Unbounded
+                    ),
                 contentScale = ContentScale.Crop
+            )
+            
+            // Foreground: Clear thumbnail with dark overlay
+            Box(
+                modifier = Modifier.fillMaxSize(),
+                contentAlignment = Alignment.Center
+            ) {
+                AsyncImage(
+                    model = File(media.thumbnailPath),
+                    contentDescription = stringResource(R.string.video_thumbnail),
+                    modifier = Modifier.fillMaxSize(),
+                    contentScale = ContentScale.Fit
+                )
+                
+                // Dark overlay for better icon visibility
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .background(Color.Black.copy(alpha = 0.3f))
+                )
+            }
+        } else {
+            // No thumbnail - show placeholder
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .background(MaterialTheme.colorScheme.surfaceVariant)
             )
         }
         
-        // Show download button or play icon
-        if (media.downloadStatus != DownloadStatus.DONE) {
-            TextButton(onClick = { onDownloadClick(media.mediaId) }) {
-                Text(stringResource(R.string.download_video))
+        // Download button or play icon overlay
+        when {
+            media.downloadStatus != DownloadStatus.DONE -> {
+                // Show download button
+                Surface(
+                    shape = RoundedCornerShape(8.dp),
+                    color = MaterialTheme.colorScheme.primary
+                ) {
+                    TextButton(onClick = { onDownloadClick(media.mediaId) }) {
+                        Icon(
+                            painter = painterResource(R.drawable.ic_file),
+                            contentDescription = null,
+                            modifier = Modifier.size(20.dp),
+                            tint = Color.White
+                        )
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text(
+                            stringResource(R.string.download_video),
+                            color = Color.White
+                        )
+                    }
+                }
+            }
+            canPlay -> {
+                // Show play icon (WhatsApp style)
+                Surface(
+                    shape = CircleShape,
+                    color = Color.White.copy(alpha = 0.9f),
+                    modifier = Modifier.size(64.dp)
+                ) {
+                    Box(
+                        contentAlignment = Alignment.Center,
+                        modifier = Modifier.fillMaxSize()
+                    ) {
+                        Icon(
+                            painter = painterResource(R.drawable.ic_video),
+                            contentDescription = stringResource(R.string.play_video),
+                            modifier = Modifier.size(32.dp),
+                            tint = MaterialTheme.colorScheme.primary
+                        )
+                    }
+                }
+                
+                // Show duration badge if available
+                if (media.durationMs != null) {
+                    Box(
+                        modifier = Modifier
+                            .align(Alignment.BottomEnd)
+                            .padding(8.dp)
+                    ) {
+                        Surface(
+                            shape = RoundedCornerShape(4.dp),
+                            color = Color.Black.copy(alpha = 0.7f)
+                        ) {
+                            Text(
+                                text = formatDuration(media.durationMs),
+                                style = MaterialTheme.typography.labelSmall,
+                                color = Color.White,
+                                modifier = Modifier.padding(horizontal = 6.dp, vertical = 3.dp)
+                            )
+                        }
+                    }
+                }
             }
         }
     }

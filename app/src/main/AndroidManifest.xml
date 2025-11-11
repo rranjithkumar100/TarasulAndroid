@@ -43,6 +43,14 @@
             </intent-filter>
         </activity>
 
+        <!-- Video Player Activity -->
+        <activity
+            android:name=".feature.video.VideoPlayerActivity"
+            android:exported="false"
+            android:theme="@android:style/Theme.Black.NoTitleBar.Fullscreen"
+            android:configChanges="orientation|screenSize|keyboardHidden" />
+
+
         <!-- FileProvider for sharing files from internal storage -->
         <provider
             android:name="androidx.core.content.FileProvider"

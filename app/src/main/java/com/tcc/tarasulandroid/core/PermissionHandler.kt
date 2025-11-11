@@ -9,6 +9,7 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.runtime.*
 import androidx.compose.ui.platform.LocalContext
 import androidx.core.content.ContextCompat
+import kotlinx.coroutines.launch
 
 /**
  * Composable to handle runtime permissions
@@ -53,6 +54,7 @@ fun rememberMultiplePermissionsState(
     onPermissionsResult: (Map<String, Boolean>) -> Unit = {}
 ): MultiplePermissionsState {
     val context = LocalContext.current
+    val coroutineScope = rememberCoroutineScope()
     var permissionsStatus by remember {
         mutableStateOf(
             permissions.associateWith { permission ->
@@ -64,14 +66,51 @@ fun rememberMultiplePermissionsState(
         )
     }
     
+    // Trigger to force re-check
+    var recheckTrigger by remember { mutableStateOf(0) }
+    
     val launcher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.RequestMultiplePermissions()
     ) { results ->
+        android.util.Log.d("PermissionHandler", "Permission dialog results: $results")
+        
+        // Immediately update from dialog results
         permissionsStatus = results
-        onPermissionsResult(results)
+        
+        // Also trigger a delayed re-check to ensure we have the actual system state
+        coroutineScope.launch {
+            kotlinx.coroutines.delay(200) // Delay to let system fully update
+            val updatedStatus = permissions.associateWith { permission ->
+                val granted = ContextCompat.checkSelfPermission(
+                    context,
+                    permission
+                ) == PackageManager.PERMISSION_GRANTED
+                android.util.Log.d("PermissionHandler", "Re-checked $permission: $granted")
+                granted
+            }
+            if (updatedStatus != permissionsStatus) {
+                permissionsStatus = updatedStatus
+            }
+            onPermissionsResult(updatedStatus)
+            recheckTrigger++
+        }
     }
     
-    return remember(permissions) {
+    // Check permissions on composition and when trigger changes
+    LaunchedEffect(permissions, recheckTrigger) {
+        val currentStatus = permissions.associateWith { permission ->
+            ContextCompat.checkSelfPermission(
+                context,
+                permission
+            ) == PackageManager.PERMISSION_GRANTED
+        }
+        if (currentStatus != permissionsStatus) {
+            android.util.Log.d("PermissionHandler", "Permission status changed: $currentStatus")
+            permissionsStatus = currentStatus
+        }
+    }
+    
+    return remember(permissions, permissionsStatus) {
         MultiplePermissionsState(
             permissions = permissions,
             permissionsStatus = permissionsStatus,
