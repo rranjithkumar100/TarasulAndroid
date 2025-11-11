@@ -39,17 +39,18 @@ fun ImagePreviewScreen(
     imagePath: String,
     onDismiss: () -> Unit
 ) {
-    // Professional animation state management
+    // Professional animation state management with WhatsApp-quality parameters
     val offsetY = remember { Animatable(0f) }
     val scale = remember { Animatable(1f) }
     val backgroundAlpha = remember { Animatable(1f) }
+    val imageAlpha = remember { Animatable(1f) }
     var isDragging by remember { mutableStateOf(false) }
     var isDismissing by remember { mutableStateOf(false) }
     val zoomState = rememberZoomableState()
     val coroutineScope = rememberCoroutineScope()
     
-    // Dismiss threshold: swipe down by 200dp
-    val dismissThreshold = 200f
+    // Dismiss threshold: swipe down by 150dp (more sensitive, like WhatsApp)
+    val dismissThreshold = 150f
     
     // Handle back button press
     BackHandler(enabled = !isDismissing) {
@@ -75,60 +76,48 @@ fun ImagePreviewScreen(
                         if (isDragging && !isDismissing) {
                             coroutineScope.launch {
                                 if (abs(offsetY.value) > dismissThreshold) {
-                                    // Smooth dismiss animation
+                                    // Professional WhatsApp-style dismiss with velocity
                                     isDismissing = true
                                     
-                                    // Animate all properties simultaneously for smooth exit
+                                    // Faster, smoother dismiss - all properties animate together
                                     launch {
                                         offsetY.animateTo(
-                                            targetValue = if (offsetY.value > 0) 1000f else -1000f,
-                                            animationSpec = tween(300)
+                                            targetValue = if (offsetY.value > 0) 2000f else -2000f,
+                                            animationSpec = tween(durationMillis = 250, delayMillis = 0)
                                         )
                                     }
                                     launch {
                                         scale.animateTo(
-                                            targetValue = 0.5f,
-                                            animationSpec = tween(300)
+                                            targetValue = 0.7f,
+                                            animationSpec = tween(durationMillis = 250, delayMillis = 0)
                                         )
                                     }
                                     launch {
                                         backgroundAlpha.animateTo(
                                             targetValue = 0f,
-                                            animationSpec = tween(300)
+                                            animationSpec = tween(durationMillis = 250, delayMillis = 0)
+                                        )
+                                    }
+                                    launch {
+                                        imageAlpha.animateTo(
+                                            targetValue = 0f,
+                                            animationSpec = tween(durationMillis = 250, delayMillis = 0)
                                         )
                                     }
                                     
-                                    kotlinx.coroutines.delay(300)
+                                    kotlinx.coroutines.delay(250)
                                     onDismiss()
                                 } else {
-                                    // Smooth spring snap-back animation (WhatsApp style)
-                                    launch {
-                                        offsetY.animateTo(
-                                            targetValue = 0f,
-                                            animationSpec = spring(
-                                                dampingRatio = Spring.DampingRatioMediumBouncy,
-                                                stiffness = Spring.StiffnessMedium
-                                            )
-                                        )
-                                    }
-                                    launch {
-                                        scale.animateTo(
-                                            targetValue = 1f,
-                                            animationSpec = spring(
-                                                dampingRatio = Spring.DampingRatioMediumBouncy,
-                                                stiffness = Spring.StiffnessMedium
-                                            )
-                                        )
-                                    }
-                                    launch {
-                                        backgroundAlpha.animateTo(
-                                            targetValue = 1f,
-                                            animationSpec = spring(
-                                                dampingRatio = Spring.DampingRatioMediumBouncy,
-                                                stiffness = Spring.StiffnessMedium
-                                            )
-                                        )
-                                    }
+                                    // Professional spring snap-back with perfect parameters
+                                    val springSpec = spring<Float>(
+                                        dampingRatio = 0.75f,  // Less bouncy, more controlled
+                                        stiffness = 400f       // Fast but smooth
+                                    )
+                                    
+                                    launch { offsetY.animateTo(0f, springSpec) }
+                                    launch { scale.animateTo(1f, springSpec) }
+                                    launch { backgroundAlpha.animateTo(1f, springSpec) }
+                                    launch { imageAlpha.animateTo(1f, springSpec) }
                                 }
                                 isDragging = false
                             }
@@ -137,34 +126,16 @@ fun ImagePreviewScreen(
                     onDragCancel = {
                         coroutineScope.launch {
                             isDragging = false
-                            // Smooth spring snap-back
-                            launch {
-                                offsetY.animateTo(
-                                    targetValue = 0f,
-                                    animationSpec = spring(
-                                        dampingRatio = Spring.DampingRatioMediumBouncy,
-                                        stiffness = Spring.StiffnessMedium
-                                    )
-                                )
-                            }
-                            launch {
-                                scale.animateTo(
-                                    targetValue = 1f,
-                                    animationSpec = spring(
-                                        dampingRatio = Spring.DampingRatioMediumBouncy,
-                                        stiffness = Spring.StiffnessMedium
-                                    )
-                                )
-                            }
-                            launch {
-                                backgroundAlpha.animateTo(
-                                    targetValue = 1f,
-                                    animationSpec = spring(
-                                        dampingRatio = Spring.DampingRatioMediumBouncy,
-                                        stiffness = Spring.StiffnessMedium
-                                    )
-                                )
-                            }
+                            // Professional snap-back
+                            val springSpec = spring<Float>(
+                                dampingRatio = 0.75f,
+                                stiffness = 400f
+                            )
+                            
+                            launch { offsetY.animateTo(0f, springSpec) }
+                            launch { scale.animateTo(1f, springSpec) }
+                            launch { backgroundAlpha.animateTo(1f, springSpec) }
+                            launch { imageAlpha.animateTo(1f, springSpec) }
                         }
                     },
                     onVerticalDrag = { _, dragAmount ->
@@ -173,10 +144,17 @@ fun ImagePreviewScreen(
                                 // Update offset instantly for responsive feel
                                 offsetY.snapTo(offsetY.value + dragAmount)
                                 
-                                // Update alpha and scale based on offset (smooth calculations)
-                                val progress = (abs(offsetY.value) / dismissThreshold).coerceIn(0f, 1f)
-                                backgroundAlpha.snapTo((1f - progress).coerceIn(0f, 1f))
-                                scale.snapTo((1f - progress * 0.2f).coerceIn(0.8f, 1f))
+                                // Professional smooth calculations with better curves
+                                val progress = (abs(offsetY.value) / (dismissThreshold * 2f)).coerceIn(0f, 1f)
+                                
+                                // Background fades faster for better reveal
+                                backgroundAlpha.snapTo((1f - progress * 1.5f).coerceIn(0f, 1f))
+                                
+                                // Image scales down smoothly
+                                scale.snapTo((1f - progress * 0.3f).coerceIn(0.7f, 1f))
+                                
+                                // Image also fades slightly when far
+                                imageAlpha.snapTo((1f - progress * 0.5f).coerceIn(0.5f, 1f))
                             }
                         }
                     }
@@ -208,7 +186,7 @@ fun ImagePreviewScreen(
             modifier = Modifier.statusBarsPadding()
         )
         
-        // Zoomable image
+        // Zoomable image with professional transforms
         SubcomposeAsyncImage(
             model = File(imagePath),
             contentDescription = "Full screen image",
@@ -218,6 +196,7 @@ fun ImagePreviewScreen(
                     translationY = offsetY.value
                     scaleX = scale.value
                     scaleY = scale.value
+                    alpha = imageAlpha.value
                 }
                 .zoomable(
                     state = zoomState,

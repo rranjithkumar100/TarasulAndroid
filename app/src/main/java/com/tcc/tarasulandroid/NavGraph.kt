@@ -107,6 +107,14 @@ fun NavGraph(
             },
             exitTransition = {
                 fadeOut(animationSpec = tween(200))
+            },
+            popEnterTransition = {
+                // Keep the chat screen visible when image preview is dismissed
+                EnterTransition.None
+            },
+            popExitTransition = {
+                // Fade out the image preview
+                fadeOut(animationSpec = tween(200))
             }
         ) { backStackEntry ->
             val encodedPath = backStackEntry.arguments?.getString("imagePath") ?: ""
