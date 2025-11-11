@@ -123,6 +123,53 @@ class MessagesRepository @Inject constructor(
     }
     
     /**
+     * Get messages with media AND reply information for a conversation with pagination
+     * Returns messages in DESC order (newest first) for pagination
+     */
+    suspend fun getMessagesWithMediaAndReplyPaginated(
+        conversationId: String,
+        limit: Int = 30,
+        offset: Int = 0
+    ): List<MessageWithMediaAndReply> = withContext(Dispatchers.IO) {
+        val messagesWithMediaAndReply = messagesDao.getMessagesWithMediaAndReplyPaginated(conversationId, limit, offset)
+        messagesWithMediaAndReply.map { messageData ->
+            val message = messageData.message
+            val replyToMessage = messageData.replyToMessage
+            
+            // Decrypt main message if needed
+            val decryptedMessage = if (message.isEncrypted && message.content.isNotEmpty()) {
+                try {
+                    val key = getEncryptionKey(conversationId)
+                    val decryptedContent = MessageEncryption.decrypt(message.content, key)
+                    message.copy(content = decryptedContent)
+                } catch (e: Exception) {
+                    message.copy(content = "🔒 Decryption failed")
+                }
+            } else {
+                message
+            }
+            
+            // Decrypt reply message if needed
+            val decryptedReplyMessage = if (replyToMessage != null && replyToMessage.isEncrypted && replyToMessage.content.isNotEmpty()) {
+                try {
+                    val key = getEncryptionKey(conversationId)
+                    val decryptedContent = MessageEncryption.decrypt(replyToMessage.content, key)
+                    replyToMessage.copy(content = decryptedContent)
+                } catch (e: Exception) {
+                    replyToMessage.copy(content = "🔒 Decryption failed")
+                }
+            } else {
+                replyToMessage
+            }
+            
+            messageData.copy(
+                message = decryptedMessage,
+                replyToMessage = decryptedReplyMessage
+            )
+        }.reversed() // Reverse to get oldest first for display
+    }
+    
+    /**
      * Get total message count for a conversation
      */
     suspend fun getMessageCount(conversationId: String): Int = withContext(Dispatchers.IO) {

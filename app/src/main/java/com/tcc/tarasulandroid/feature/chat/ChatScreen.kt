@@ -38,6 +38,7 @@ import androidx.compose.foundation.layout.windowInsetsPadding
 import com.tcc.tarasulandroid.R
 import com.tcc.tarasulandroid.core.*
 import com.tcc.tarasulandroid.data.MessageWithMedia
+import com.tcc.tarasulandroid.data.MessageWithMediaAndReply
 import com.tcc.tarasulandroid.data.db.MessageType
 import com.tcc.tarasulandroid.feature.chat.components.ReplyPreview
 import com.tcc.tarasulandroid.feature.chat.models.ReplyMessage
@@ -68,7 +69,7 @@ fun ChatScreen(
     }
 
     var conversationId by remember { mutableStateOf<String?>(null) }
-    var messages by remember { mutableStateOf<List<MessageWithMedia>>(emptyList()) }
+    var messages by remember { mutableStateOf<List<MessageWithMediaAndReply>>(emptyList()) }
     var isLoadingMessages by remember { mutableStateOf(false) }
     var hasMoreMessages by remember { mutableStateOf(true) }
     var currentOffset by remember { mutableStateOf(0) }
@@ -88,7 +89,7 @@ fun ChatScreen(
             // Load initial messages
             if (conversationId != null) {
                 isLoadingMessages = true
-                val initialMessages = messagesRepository.getMessagesWithMediaPaginated(
+                val initialMessages = messagesRepository.getMessagesWithMediaAndReplyPaginated(
                     conversationId = conversationId!!,
                     limit = pageSize,
                     offset = 0
@@ -140,7 +141,7 @@ fun ChatScreen(
                     isLoadingMessages = true
 
                     try {
-                        val moreMessages = messagesRepository.getMessagesWithMediaPaginated(
+                        val moreMessages = messagesRepository.getMessagesWithMediaAndReplyPaginated(
                             conversationId = conversationId!!,
                             limit = pageSize,
                             offset = currentOffset
@@ -542,7 +543,7 @@ fun ChatScreen(
                                                 replyToMessageId = replyMessageId
                                             )
                                             // Reload the first page to show the new message
-                                            val updatedMessages = messagesRepository.getMessagesWithMediaPaginated(
+                                            val updatedMessages = messagesRepository.getMessagesWithMediaAndReplyPaginated(
                                                 conversationId = conversationId!!,
                                                 limit = pageSize,
                                                 offset = 0
@@ -693,11 +694,12 @@ fun ChatScreen(
  */
 @Composable
 private fun SwipeableMessageItem(
-    messageWithMedia: MessageWithMedia,
+    messageWithMedia: MessageWithMediaAndReply,
     onReply: () -> Unit,
     onDownloadClick: (String) -> Unit
 ) {
     val message = messageWithMedia.message
+    val replyToMessage = messageWithMedia.replyToMessage
     val isOutgoing = message.direction == com.tcc.tarasulandroid.data.db.MessageDirection.OUTGOING
     
     // Animation states
@@ -832,8 +834,9 @@ private fun SwipeableMessageItem(
                     rotationZ = (offsetX.value / maxSwipe) * 2f
                 }
         ) {
-            MessageBubble(
+            MessageBubbleWithReply(
                 messageWithMedia = messageWithMedia,
+                replyToMessage = replyToMessage,
                 onDownloadClick = onDownloadClick
             )
         }
@@ -843,7 +846,7 @@ private fun SwipeableMessageItem(
 /**
  * Extension function to convert MessageWithMedia to ReplyMessage
  */
-private fun MessageWithMedia.toReplyMessage(contactName: String): ReplyMessage {
+private fun MessageWithMediaAndReply.toReplyMessage(contactName: String): ReplyMessage {
     val message = this.message
     val senderName = if (message.direction == com.tcc.tarasulandroid.data.db.MessageDirection.OUTGOING) {
         "You"
@@ -858,3 +861,180 @@ private fun MessageWithMedia.toReplyMessage(contactName: String): ReplyMessage {
         messageType = message.type
     )
 }
+
+/**
+ * Message bubble that shows the reply indicator when message is a reply
+ */
+@Composable
+private fun MessageBubbleWithReply(
+    messageWithMedia: MessageWithMediaAndReply,
+    replyToMessage: com.tcc.tarasulandroid.data.db.MessageEntity?,
+    onDownloadClick: (String) -> Unit
+) {
+    // If no reply, just show regular bubble
+    if (replyToMessage == null) {
+        MessageBubble(
+            messageWithMedia = MessageWithMedia(messageWithMedia.message, messageWithMedia.media),
+            onDownloadClick = onDownloadClick
+        )
+    } else {
+        // Show reply indicator inside the message bubble
+        val message = messageWithMedia.message
+        val media = messageWithMedia.media
+        val isOutgoing = message.direction == com.tcc.tarasulandroid.data.db.MessageDirection.OUTGOING
+        
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 8.dp, vertical = 4.dp),
+            horizontalAlignment = if (isOutgoing) Alignment.End else Alignment.Start
+        ) {
+            Surface(
+                shape = RoundedCornerShape(12.dp),
+                color = if (isOutgoing) {
+                    MaterialTheme.colorScheme.primaryContainer
+                } else {
+                    MaterialTheme.colorScheme.surfaceVariant
+                },
+                modifier = Modifier.widthIn(max = 280.dp)
+            ) {
+                Column(modifier = Modifier.padding(8.dp)) {
+                    // Reply indicator at the top
+                    com.tcc.tarasulandroid.feature.chat.components.ReplyIndicator(
+                        senderName = if (replyToMessage.direction == com.tcc.tarasulandroid.data.db.MessageDirection.OUTGOING) {
+                            "You"
+                        } else {
+                            replyToMessage.senderId.takeIf { it != "me" } ?: "Contact"
+                        },
+                        content = replyToMessage.content,
+                        messageType = replyToMessage.type
+                    )
+                    
+                    Spacer(modifier = Modifier.height(8.dp))
+                    
+                    // Now render the actual message content (using inline rendering)
+                    when (message.type) {
+                        MessageType.IMAGE -> {
+                            if (media != null && media.localPath != null && java.io.File(media.localPath).exists()) {
+                                coil.compose.AsyncImage(
+                                    model = java.io.File(media.localPath),
+                                    contentDescription = stringResource(R.string.image_message),
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .height(200.dp)
+                                        .clip(RoundedCornerShape(8.dp)),
+                                    contentScale = androidx.compose.ui.layout.ContentScale.Crop
+                                )
+                            }
+                        }
+                        MessageType.VIDEO -> {
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .height(200.dp)
+                                    .clip(RoundedCornerShape(8.dp))
+                                    .background(MaterialTheme.colorScheme.surfaceVariant),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Icon(
+                                    painter = painterResource(R.drawable.ic_video),
+                                    contentDescription = stringResource(R.string.video),
+                                    modifier = Modifier.size(48.dp),
+                                    tint = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
+                        }
+                        MessageType.FILE -> {
+                            Row(
+                                modifier = Modifier.fillMaxWidth().padding(8.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Icon(
+                                    painter = painterResource(R.drawable.ic_file),
+                                    contentDescription = stringResource(R.string.file),
+                                    modifier = Modifier.size(32.dp),
+                                    tint = MaterialTheme.colorScheme.primary
+                                )
+                                Spacer(modifier = Modifier.width(12.dp))
+                                Text(
+                                    text = media?.fileName ?: "File",
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    modifier = Modifier.weight(1f)
+                                )
+                            }
+                        }
+                        MessageType.CONTACT -> {
+                            try {
+                                val contactInfo = com.tcc.tarasulandroid.data.ContactInfo.fromJsonString(message.content)
+                                Row(
+                                    modifier = Modifier.fillMaxWidth().padding(8.dp),
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Icon(
+                                        painter = painterResource(R.drawable.ic_contact),
+                                        contentDescription = stringResource(R.string.contact),
+                                        modifier = Modifier.size(32.dp),
+                                        tint = MaterialTheme.colorScheme.primary
+                                    )
+                                    Spacer(modifier = Modifier.width(12.dp))
+                                    Text(
+                                        text = contactInfo.name,
+                                        style = MaterialTheme.typography.bodyMedium,
+                                        fontWeight = FontWeight.Bold
+                                    )
+                                }
+                            } catch (e: Exception) {
+                                Text("Contact card")
+                            }
+                        }
+                        MessageType.AUDIO -> {
+                            Row(
+                                modifier = Modifier.fillMaxWidth().padding(8.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Icon(
+                                    painter = painterResource(R.drawable.ic_audio),
+                                    contentDescription = stringResource(R.string.audio),
+                                    modifier = Modifier.size(32.dp),
+                                    tint = MaterialTheme.colorScheme.primary
+                                )
+                                Spacer(modifier = Modifier.width(12.dp))
+                                Text(
+                                    text = "Audio message",
+                                    style = MaterialTheme.typography.bodyMedium
+                                )
+                            }
+                        }
+                        else -> {}
+                    }
+                    
+                    // Text content
+                    if (message.content.isNotBlank() && message.type != MessageType.CONTACT) {
+                        Text(
+                            text = message.content,
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = if (isOutgoing) {
+                                MaterialTheme.colorScheme.onPrimaryContainer
+                            } else {
+                                MaterialTheme.colorScheme.onSurfaceVariant
+                            }
+                        )
+                    }
+                    
+                    // Timestamp
+                    Text(
+                        text = java.text.SimpleDateFormat("HH:mm", java.util.Locale.getDefault()).format(java.util.Date(message.timestamp)),
+                        style = MaterialTheme.typography.labelSmall,
+                        color = if (isOutgoing) {
+                            MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.6f)
+                        } else {
+                            MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f)
+                        },
+                        modifier = Modifier.align(Alignment.End)
+                    )
+                }
+            }
+        }
+    }
+}
+
