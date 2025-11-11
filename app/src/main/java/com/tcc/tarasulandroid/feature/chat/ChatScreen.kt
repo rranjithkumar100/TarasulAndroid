@@ -2,8 +2,11 @@ package com.tcc.tarasulandroid.feature.chat
 
 import android.net.Uri
 import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.detectHorizontalDragGestures
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -13,11 +16,15 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.Send
+import androidx.compose.material.icons.filled.Reply
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
@@ -29,9 +36,13 @@ import androidx.compose.foundation.layout.safeDrawing
 import androidx.compose.foundation.layout.windowInsetsPadding
 import com.tcc.tarasulandroid.R
 import com.tcc.tarasulandroid.core.*
+import com.tcc.tarasulandroid.data.MessageWithMedia
 import com.tcc.tarasulandroid.data.db.MessageType
+import com.tcc.tarasulandroid.feature.chat.components.ReplyPreview
+import com.tcc.tarasulandroid.feature.chat.models.ReplyMessage
 import com.tcc.tarasulandroid.feature.home.model.Contact
 import kotlinx.coroutines.launch
+import kotlin.math.abs
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -56,11 +67,13 @@ fun ChatScreen(
     }
 
     var conversationId by remember { mutableStateOf<String?>(null) }
-    var messages by remember { mutableStateOf<List<com.tcc.tarasulandroid.data.MessageWithMedia>>(emptyList()) }
+    var messages by remember { mutableStateOf<List<MessageWithMedia>>(emptyList()) }
     var isLoadingMessages by remember { mutableStateOf(false) }
     var hasMoreMessages by remember { mutableStateOf(true) }
     var currentOffset by remember { mutableStateOf(0) }
-    val pageSize = 30
+    var shouldAutoScroll by remember { mutableStateOf(true) }
+    var replyToMessage by remember { mutableStateOf<ReplyMessage?>(null) }
+    val pageSize = 20
 
     LaunchedEffect(contact.id) {
         try {
@@ -85,8 +98,11 @@ fun ChatScreen(
                 val totalCount = messagesRepository.getMessageCount(conversationId!!)
                 hasMoreMessages = initialMessages.size < totalCount
                 isLoadingMessages = false
+                
+                android.util.Log.d("ChatScreen", "Initial load: ${initialMessages.size} messages, offset: $currentOffset, total: $totalCount, hasMore: $hasMoreMessages")
             }
-        } catch (_: Exception) {
+        } catch (e: Exception) {
+            android.util.Log.e("ChatScreen", "Error loading messages", e)
             isLoadingMessages = false
         }
     }
@@ -95,38 +111,70 @@ fun ChatScreen(
 
     // Auto-scroll to bottom when new messages arrive
     LaunchedEffect(messages.size) {
-        if (messages.isNotEmpty() && currentOffset <= pageSize) {
-            // Only auto-scroll for the first page (initial load or new messages)
+        if (messages.isNotEmpty() && shouldAutoScroll) {
             listState.animateScrollToItem(messages.size - 1)
+            shouldAutoScroll = false
         }
     }
     
     // Detect when scrolling near the top to load more messages
-    LaunchedEffect(listState.firstVisibleItemIndex) {
-        if (!isLoadingMessages && hasMoreMessages && listState.firstVisibleItemIndex < 5 && conversationId != null) {
-            isLoadingMessages = true
-            val moreMessages = messagesRepository.getMessagesWithMediaPaginated(
-                conversationId = conversationId!!,
-                limit = pageSize,
-                offset = currentOffset
-            )
-            
-            if (moreMessages.isNotEmpty()) {
-                // Prepend old messages to the beginning
-                val currentScrollIndex = listState.firstVisibleItemIndex
-                messages = moreMessages + messages
-                currentOffset += moreMessages.size
+    LaunchedEffect(listState.isScrollInProgress) {
+        snapshotFlow { listState.firstVisibleItemIndex }
+            .collect { firstVisibleIndex ->
+                // Only load if:
+                // 1. Not currently loading
+                // 2. Has more messages to load
+                // 3. Scrolled near top (within first 3 items, excluding loading indicator)
+                // 4. Conversation ID exists
+                val actualFirstMessageIndex = if (isLoadingMessages) firstVisibleIndex - 1 else firstVisibleIndex
                 
-                // Maintain scroll position
-                coroutineScope.launch {
-                    listState.scrollToItem(currentScrollIndex + moreMessages.size)
+                if (!isLoadingMessages && 
+                    hasMoreMessages && 
+                    actualFirstMessageIndex <= 2 && 
+                    actualFirstMessageIndex >= 0 &&
+                    conversationId != null &&
+                    messages.isNotEmpty()) {
+                    
+                    android.util.Log.d("ChatScreen", "Loading more messages - currentOffset: $currentOffset")
+                    isLoadingMessages = true
+                    
+                    try {
+                        val moreMessages = messagesRepository.getMessagesWithMediaPaginated(
+                            conversationId = conversationId!!,
+                            limit = pageSize,
+                            offset = currentOffset
+                        )
+                        
+                        android.util.Log.d("ChatScreen", "Loaded ${moreMessages.size} more messages")
+                        
+                        if (moreMessages.isNotEmpty()) {
+                            // Prepend old messages to the beginning
+                            val currentScrollIndex = listState.firstVisibleItemIndex
+                            val currentScrollOffset = listState.firstVisibleItemScrollOffset
+                            
+                            messages = moreMessages + messages
+                            currentOffset += moreMessages.size
+                            
+                            // Maintain scroll position
+                            coroutineScope.launch {
+                                // Account for loading indicator if present
+                                val adjustedIndex = currentScrollIndex + moreMessages.size
+                                listState.scrollToItem(adjustedIndex, currentScrollOffset)
+                                android.util.Log.d("ChatScreen", "Adjusted scroll to index: $adjustedIndex")
+                            }
+                        }
+                        
+                        val totalCount = messagesRepository.getMessageCount(conversationId!!)
+                        hasMoreMessages = currentOffset < totalCount
+                        
+                        android.util.Log.d("ChatScreen", "New offset: $currentOffset, total: $totalCount, hasMore: $hasMoreMessages")
+                    } catch (e: Exception) {
+                        android.util.Log.e("ChatScreen", "Error loading more messages", e)
+                    } finally {
+                        isLoadingMessages = false
+                    }
                 }
             }
-            
-            val totalCount = messagesRepository.getMessageCount(conversationId!!)
-            hasMoreMessages = currentOffset < totalCount
-            isLoadingMessages = false
-        }
     }
     
     // Track what was clicked (to relaunch after permission granted)
@@ -436,64 +484,81 @@ fun ChatScreen(
                         WindowInsets.safeDrawing.only(WindowInsetsSides.Bottom)
                     )
             ) {
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 8.dp, vertical = 8.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    // Attachment button
-                    IconButton(
-                        onClick = { showMediaPicker = true }
-                    ) {
-                        Icon(
-                            painter = painterResource(id = R.drawable.ic_attach),
-                            contentDescription = stringResource(R.string.attach_media),
-                            tint = MaterialTheme.colorScheme.primary
+                Column {
+                    // Reply preview
+                    replyToMessage?.let { reply ->
+                        ReplyPreview(
+                            replyMessage = reply,
+                            onCancelReply = { replyToMessage = null }
                         )
                     }
                     
-                    TextField(
-                        value = messageText,
-                        onValueChange = { messageText = it },
-                        modifier = Modifier.weight(1f),
-                        placeholder = { Text(stringResource(R.string.type_message)) },
-                        colors = TextFieldDefaults.colors(
-                            focusedIndicatorColor = MaterialTheme.colorScheme.primary,
-                            unfocusedIndicatorColor = MaterialTheme.colorScheme.outline,
-                            focusedContainerColor = MaterialTheme.colorScheme.surfaceVariant,
-                            unfocusedContainerColor = MaterialTheme.colorScheme.surfaceVariant
-                        ),
-                        shape = RoundedCornerShape(24.dp),
-                        maxLines = 4
-                    )
-                    Spacer(modifier = Modifier.width(8.dp))
-                    FloatingActionButton(
-                        onClick = {
-                            if (messageText.isNotBlank() && conversationId != null) {
-                                val textToSend = messageText.trim()
-                                messageText = ""
-                                coroutineScope.launch {
-                                    try {
-                                        messagesRepository.sendMessage(
-                                            conversationId = conversationId!!,
-                                            content = textToSend,
-                                            recipientId = contact.id
-                                        )
-                                        // Reload the first page to show the new message
-                                        val updatedMessages = messagesRepository.getMessagesWithMediaPaginated(
-                                            conversationId = conversationId!!,
-                                            limit = pageSize,
-                                            offset = 0
-                                        )
-                                        messages = updatedMessages
-                                        currentOffset = updatedMessages.size
-                                        // Scroll to bottom
-                                        listState.animateScrollToItem(messages.size - 1)
-                                    } catch (_: Exception) { }
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 8.dp, vertical = 8.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        // Attachment button
+                        IconButton(
+                            onClick = { showMediaPicker = true }
+                        ) {
+                            Icon(
+                                painter = painterResource(id = R.drawable.ic_attach),
+                                contentDescription = stringResource(R.string.attach_media),
+                                tint = MaterialTheme.colorScheme.primary
+                            )
+                        }
+                        
+                        TextField(
+                            value = messageText,
+                            onValueChange = { messageText = it },
+                            modifier = Modifier.weight(1f),
+                            placeholder = { Text(stringResource(R.string.type_message)) },
+                            colors = TextFieldDefaults.colors(
+                                focusedIndicatorColor = MaterialTheme.colorScheme.primary,
+                                unfocusedIndicatorColor = MaterialTheme.colorScheme.outline,
+                                focusedContainerColor = MaterialTheme.colorScheme.surfaceVariant,
+                                unfocusedContainerColor = MaterialTheme.colorScheme.surfaceVariant
+                            ),
+                            shape = RoundedCornerShape(24.dp),
+                            maxLines = 4
+                        )
+                        Spacer(modifier = Modifier.width(8.dp))
+                        FloatingActionButton(
+                            onClick = {
+                                if (messageText.isNotBlank() && conversationId != null) {
+                                    val textToSend = messageText.trim()
+                                    val replyMessageId = replyToMessage?.messageId
+                                    messageText = ""
+                                    replyToMessage = null
+                                    coroutineScope.launch {
+                                        try {
+                                            messagesRepository.sendMessage(
+                                                conversationId = conversationId!!,
+                                                content = textToSend,
+                                                recipientId = contact.id,
+                                                replyToMessageId = replyMessageId
+                                            )
+                                            // Reload the first page to show the new message
+                                            val updatedMessages = messagesRepository.getMessagesWithMediaPaginated(
+                                                conversationId = conversationId!!,
+                                                limit = pageSize,
+                                                offset = 0
+                                            )
+                                            messages = updatedMessages
+                                            currentOffset = updatedMessages.size
+                                            
+                                            val totalCount = messagesRepository.getMessageCount(conversationId!!)
+                                            hasMoreMessages = currentOffset < totalCount
+                                            
+                                            // Scroll to bottom
+                                            shouldAutoScroll = true
+                                            listState.animateScrollToItem(messages.size - 1)
+                                        } catch (_: Exception) { }
+                                    }
                                 }
-                            }
-                        },
+                            },
                         modifier = Modifier.size(48.dp),
                         containerColor = MaterialTheme.colorScheme.primary
                     ) {
@@ -537,9 +602,12 @@ fun ChatScreen(
                 }
                 
                 items(items = messages, key = { it.message.id }) { messageWithMedia ->
-                    // Use new MessageBubble that supports media
-                    com.tcc.tarasulandroid.feature.chat.MessageBubble(
+                    // Swipeable message with reply support
+                    SwipeableMessageItem(
                         messageWithMedia = messageWithMedia,
+                        onReply = {
+                            replyToMessage = messageWithMedia.toReplyMessage(contact.name)
+                        },
                         onDownloadClick = { mediaId ->
                             coroutineScope.launch {
                                 messagesRepository.downloadMedia(mediaId)
@@ -616,6 +684,105 @@ fun ChatScreen(
             }
         )
     }
+}
+
+/**
+ * Swipeable message item that triggers reply on swipe
+ */
+@Composable
+private fun SwipeableMessageItem(
+    messageWithMedia: MessageWithMedia,
+    onReply: () -> Unit,
+    onDownloadClick: (String) -> Unit
+) {
+    val message = messageWithMedia.message
+    val isOutgoing = message.direction == com.tcc.tarasulandroid.data.db.MessageDirection.OUTGOING
+    
+    // Animation state for swipe
+    val offsetX = remember { Animatable(0f) }
+    val coroutineScope = rememberCoroutineScope()
+    
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .pointerInput(Unit) {
+                detectHorizontalDragGestures(
+                    onDragEnd = {
+                        coroutineScope.launch {
+                            // If swiped enough, trigger reply
+                            if (abs(offsetX.value) > 100f) {
+                                onReply()
+                            }
+                            // Reset position
+                            offsetX.animateTo(0f, animationSpec = tween(200))
+                        }
+                    },
+                    onHorizontalDrag = { _, dragAmount ->
+                        coroutineScope.launch {
+                            // For incoming messages: swipe right to reply
+                            // For outgoing messages: swipe left to reply
+                            val newOffset = offsetX.value + dragAmount
+                            val maxSwipe = 100f
+                            
+                            if (isOutgoing) {
+                                // Outgoing: allow left swipe only
+                                offsetX.snapTo(newOffset.coerceIn(-maxSwipe, 0f))
+                            } else {
+                                // Incoming: allow right swipe only
+                                offsetX.snapTo(newOffset.coerceIn(0f, maxSwipe))
+                            }
+                        }
+                    }
+                )
+            }
+    ) {
+        // Reply icon that appears during swipe
+        if (abs(offsetX.value) > 20f) {
+            Icon(
+                imageVector = Icons.Default.Reply,
+                contentDescription = stringResource(R.string.reply),
+                tint = MaterialTheme.colorScheme.primary,
+                modifier = Modifier
+                    .align(if (isOutgoing) Alignment.CenterEnd else Alignment.CenterStart)
+                    .padding(horizontal = 16.dp)
+                    .size(24.dp)
+                    .graphicsLayer {
+                        alpha = (abs(offsetX.value) / 100f).coerceIn(0f, 1f)
+                    }
+            )
+        }
+        
+        // Message bubble with offset
+        Box(
+            modifier = Modifier.graphicsLayer {
+                translationX = offsetX.value
+            }
+        ) {
+            MessageBubble(
+                messageWithMedia = messageWithMedia,
+                onDownloadClick = onDownloadClick
+            )
+        }
+    }
+}
+
+/**
+ * Extension function to convert MessageWithMedia to ReplyMessage
+ */
+private fun MessageWithMedia.toReplyMessage(contactName: String): ReplyMessage {
+    val message = this.message
+    val senderName = if (message.direction == com.tcc.tarasulandroid.data.db.MessageDirection.OUTGOING) {
+        "You"
+    } else {
+        contactName
+    }
+    
+    return ReplyMessage(
+        messageId = message.id,
+        senderName = senderName,
+        content = message.content,
+        messageType = message.type
+    )
 }
 
 // Old MessageBubble removed - now using the one from MessageBubble.kt that supports media
