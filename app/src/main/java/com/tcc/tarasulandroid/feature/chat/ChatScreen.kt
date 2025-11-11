@@ -964,8 +964,15 @@ private fun MessageBubbleWithReply(
                             }
                         }
                         MessageType.CONTACT -> {
-                            try {
-                                val contactInfo = com.tcc.tarasulandroid.data.ContactInfo.fromJsonString(message.content)
+                            val contactInfo = remember(message.content) {
+                                try {
+                                    com.tcc.tarasulandroid.data.ContactInfo.fromJsonString(message.content)
+                                } catch (e: Exception) {
+                                    null
+                                }
+                            }
+
+                            if (contactInfo != null) {
                                 Row(
                                     modifier = Modifier.fillMaxWidth().padding(8.dp),
                                     verticalAlignment = Alignment.CenterVertically
@@ -983,7 +990,7 @@ private fun MessageBubbleWithReply(
                                         fontWeight = FontWeight.Bold
                                     )
                                 }
-                            } catch (e: Exception) {
+                            } else {
                                 Text("Contact card")
                             }
                         }
