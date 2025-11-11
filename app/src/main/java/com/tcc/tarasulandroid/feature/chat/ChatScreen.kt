@@ -115,17 +115,25 @@ fun ChatScreen(
     var isFirstLoad by remember { mutableStateOf(true) }
 
     // Auto-scroll to bottom when new messages arrive
-    LaunchedEffect(messages.size) {
+    LaunchedEffect(messages.size, shouldAutoScroll) {
         if (messages.isNotEmpty() && shouldAutoScroll) {
-            if (isFirstLoad) {
-                // Jump instantly on first load to avoid lag
-                listState.scrollToItem(messages.size - 1)
-                isFirstLoad = false
-            } else {
-                // Animate on subsequent updates
-                listState.animateScrollToItem(messages.size - 1)
+            try {
+                // Small delay to ensure compose is ready
+                kotlinx.coroutines.delay(50)
+                
+                if (isFirstLoad) {
+                    // Jump instantly on first load to avoid lag
+                    listState.scrollToItem(messages.size - 1)
+                    isFirstLoad = false
+                } else {
+                    // Animate on subsequent updates
+                    listState.animateScrollToItem(messages.size - 1)
+                }
+                shouldAutoScroll = false
+            } catch (e: Exception) {
+                android.util.Log.e("ChatScreen", "Error scrolling to bottom", e)
+                shouldAutoScroll = false
             }
-            shouldAutoScroll = false
         }
     }
 
@@ -190,28 +198,30 @@ fun ChatScreen(
     }
 
     // Helper function to reload messages after sending
-    suspend fun reloadMessages() {
-        try {
-            val updatedMessages = messagesRepository.getMessagesWithMediaAndReplyPaginated(
-                conversationId = conversationId!!,
-                limit = pageSize,
-                offset = 0
-            )
-            messages = updatedMessages
-            currentOffset = updatedMessages.size
-            
-            val totalCount = messagesRepository.getMessageCount(conversationId!!)
-            hasMoreMessages = currentOffset < totalCount
-            
-            // Ensure isFirstLoad is false so we use animation
-            isFirstLoad = false
-            
-            // Scroll to bottom with animation
-            shouldAutoScroll = true
-            
-            android.util.Log.d("ChatScreen", "Messages reloaded after media send: ${updatedMessages.size} messages")
-        } catch (e: Exception) {
-            android.util.Log.e("ChatScreen", "Error reloading messages", e)
+    fun reloadMessages() {
+        coroutineScope.launch {
+            try {
+                val updatedMessages = messagesRepository.getMessagesWithMediaAndReplyPaginated(
+                    conversationId = conversationId!!,
+                    limit = pageSize,
+                    offset = 0
+                )
+                messages = updatedMessages
+                currentOffset = updatedMessages.size
+                
+                val totalCount = messagesRepository.getMessageCount(conversationId!!)
+                hasMoreMessages = currentOffset < totalCount
+                
+                // Ensure isFirstLoad is false so we use animation
+                isFirstLoad = false
+                
+                // Trigger auto-scroll via the LaunchedEffect
+                shouldAutoScroll = true
+                
+                android.util.Log.d("ChatScreen", "Messages reloaded after media send: ${updatedMessages.size} messages")
+            } catch (e: Exception) {
+                android.util.Log.e("ChatScreen", "Error reloading messages", e)
+            }
         }
     }
     
@@ -253,6 +263,18 @@ fun ChatScreen(
             return@rememberLauncherForActivityResult
         }
 
+        // Take persistent URI permission for modern photo picker
+        try {
+            context.contentResolver.takePersistableUriPermission(
+                uri,
+                android.content.Intent.FLAG_GRANT_READ_URI_PERMISSION
+            )
+            android.util.Log.d("ChatScreen", "Taken persistent URI permission for: $uri")
+        } catch (e: SecurityException) {
+            // Some URIs don't support persistent permissions (e.g., temporary URIs)
+            android.util.Log.d("ChatScreen", "Could not take persistent permission (this is OK for some URIs): ${e.message}")
+        }
+
         coroutineScope.launch {
             try {
                 android.util.Log.d("ChatScreen", "Sending image: $uri")
@@ -272,6 +294,7 @@ fun ChatScreen(
                 reloadMessages()
             } catch (e: Exception) {
                 android.util.Log.e("ChatScreen", "Error sending image", e)
+                e.printStackTrace()
             }
         }
     }
@@ -283,6 +306,17 @@ fun ChatScreen(
         if (uri == null) {
             android.util.Log.w("ChatScreen", "Video picker returned null URI (cancelled or error)")
             return@rememberLauncherForActivityResult
+        }
+
+        // Take persistent URI permission for modern photo picker
+        try {
+            context.contentResolver.takePersistableUriPermission(
+                uri,
+                android.content.Intent.FLAG_GRANT_READ_URI_PERMISSION
+            )
+            android.util.Log.d("ChatScreen", "Taken persistent URI permission for: $uri")
+        } catch (e: SecurityException) {
+            android.util.Log.d("ChatScreen", "Could not take persistent permission (this is OK for some URIs): ${e.message}")
         }
 
         coroutineScope.launch {
@@ -304,6 +338,7 @@ fun ChatScreen(
                 reloadMessages()
             } catch (e: Exception) {
                 android.util.Log.e("ChatScreen", "Error sending video", e)
+                e.printStackTrace()
             }
         }
     }
