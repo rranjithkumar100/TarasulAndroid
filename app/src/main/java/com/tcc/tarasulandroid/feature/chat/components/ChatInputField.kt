@@ -66,7 +66,7 @@ fun ChatInputField(
             ) {
                 Icon(
                     painter = painterResource(R.drawable.ic_attach),
-                    contentDescription = stringResource(R.string.attach),
+                    contentDescription = "Attach",
                     tint = MaterialTheme.colorScheme.primary
                 )
             }
@@ -79,15 +79,15 @@ fun ChatInputField(
                 placeholder = {
                     Text(
                         text = if (replyToMessage != null) {
-                            stringResource(R.string.reply_to, replyToMessage.senderName)
+                            "Replying to ${replyToMessage.senderName}"
                         } else {
-                            stringResource(R.string.type_message)
+                            "Type a message..."
                         }
                     )
                 },
                 colors = TextFieldDefaults.colors(
-                    focusedIndicatorColor = MaterialTheme.colorScheme.transparent,
-                    unfocusedIndicatorColor = MaterialTheme.colorScheme.transparent
+                    focusedIndicatorColor = androidx.compose.ui.graphics.Color.Transparent,
+                    unfocusedIndicatorColor = androidx.compose.ui.graphics.Color.Transparent
                 ),
                 shape = CircleShape,
                 maxLines = 5
@@ -101,7 +101,7 @@ fun ChatInputField(
             ) {
                 Icon(
                     imageVector = Icons.AutoMirrored.Filled.Send,
-                    contentDescription = stringResource(R.string.send),
+                    contentDescription = "Send",
                     tint = if (messageText.isNotBlank()) {
                         MaterialTheme.colorScheme.primary
                     } else {

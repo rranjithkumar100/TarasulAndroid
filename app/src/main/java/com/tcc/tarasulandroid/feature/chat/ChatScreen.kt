@@ -70,13 +70,13 @@ fun ChatScreen(
 
     // Permissions
     val cameraPermissionState = rememberMultiplePermissionsState(
-        permissions = CameraPermissions.getCameraPermissions()
+        permissions = MediaPermissions.getCameraPermissions()
     )
     val mediaPermissionsState = rememberMultiplePermissionsState(
         permissions = MediaPermissions.getMediaPermissions()
     )
     val contactsPermissionState = rememberMultiplePermissionsState(
-        permissions = ContactsPermissions.getContactsPermissions()
+        permissions = MediaPermissions.getContactsPermissions()
     )
 
     // Media launchers
@@ -98,10 +98,10 @@ fun ChatScreen(
                         android.util.Log.d("ChatScreen", "Sending image: $uri")
                         messagesRepository.sendMediaMessage(
                             conversationId = convId,
-                            contactId = contact.id,
-                            uri = uri,
-                            type = com.tcc.tarasulandroid.data.db.MessageType.IMAGE,
-                            replyToMessageId = replyToMessage?.messageId
+                            recipientId = contact.id,
+                            mediaUri = uri,
+                            mediaType = com.tcc.tarasulandroid.data.db.MessageType.IMAGE,
+                            caption = replyToMessage?.messageId ?: ""
                         )
                         android.util.Log.d("ChatScreen", "Image sent successfully")
                         reloadMessages(messagesRepository, convId, pageSize) {
@@ -136,10 +136,10 @@ fun ChatScreen(
                     try {
                         messagesRepository.sendMediaMessage(
                             conversationId = convId,
-                            contactId = contact.id,
-                            uri = uri,
-                            type = com.tcc.tarasulandroid.data.db.MessageType.VIDEO,
-                            replyToMessageId = replyToMessage?.messageId
+                            recipientId = contact.id,
+                            mediaUri = uri,
+                            mediaType = com.tcc.tarasulandroid.data.db.MessageType.VIDEO,
+                            caption = replyToMessage?.messageId ?: ""
                         )
                         reloadMessages(messagesRepository, convId, pageSize) {
                             messages = it.first
@@ -164,10 +164,10 @@ fun ChatScreen(
                     try {
                         messagesRepository.sendMediaMessage(
                             conversationId = convId,
-                            contactId = contact.id,
-                            uri = uri,
-                            type = com.tcc.tarasulandroid.data.db.MessageType.FILE,
-                            replyToMessageId = replyToMessage?.messageId
+                            recipientId = contact.id,
+                            mediaUri = uri,
+                            mediaType = com.tcc.tarasulandroid.data.db.MessageType.FILE,
+                            caption = replyToMessage?.messageId ?: ""
                         )
                         reloadMessages(messagesRepository, convId, pageSize) {
                             messages = it.first
@@ -194,10 +194,10 @@ fun ChatScreen(
                     try {
                         messagesRepository.sendMediaMessage(
                             conversationId = convId,
-                            contactId = contact.id,
-                            uri = cameraImageUri!!,
-                            type = com.tcc.tarasulandroid.data.db.MessageType.IMAGE,
-                            replyToMessageId = replyToMessage?.messageId
+                            recipientId = contact.id,
+                            mediaUri = cameraImageUri!!,
+                            mediaType = com.tcc.tarasulandroid.data.db.MessageType.IMAGE,
+                            caption = replyToMessage?.messageId ?: ""
                         )
                         reloadMessages(messagesRepository, convId, pageSize) {
                             messages = it.first
@@ -222,10 +222,10 @@ fun ChatScreen(
                     try {
                         messagesRepository.sendMediaMessage(
                             conversationId = convId,
-                            contactId = contact.id,
-                            uri = uri,
-                            type = com.tcc.tarasulandroid.data.db.MessageType.CONTACT,
-                            replyToMessageId = replyToMessage?.messageId
+                            recipientId = contact.id,
+                            mediaUri = uri,
+                            mediaType = com.tcc.tarasulandroid.data.db.MessageType.CONTACT,
+                            caption = replyToMessage?.messageId ?: ""
                         )
                         reloadMessages(messagesRepository, convId, pageSize) {
                             messages = it.first
@@ -385,7 +385,7 @@ fun ChatScreen(
                                 try {
                                     messagesRepository.sendMessage(
                                         conversationId = conversationId!!,
-                                        contactId = contact.id,
+                                        recipientId = contact.id,
                                         content = messageText,
                                         replyToMessageId = replyToMessage?.messageId
                                     )

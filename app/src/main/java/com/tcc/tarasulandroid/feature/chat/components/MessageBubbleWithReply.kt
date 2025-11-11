@@ -144,7 +144,7 @@ fun MessageBubbleWithReply(
                 text = java.text.SimpleDateFormat(
                     "HH:mm",
                     java.util.Locale.getDefault()
-                ).format(java.util.Date(message.sentAt)),
+                ).format(java.util.Date(message.timestamp)),
                 style = MaterialTheme.typography.labelSmall,
                 color = if (isOutgoing) {
                     MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.6f)
