@@ -14,7 +14,9 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.painter.Painter
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -81,8 +83,8 @@ fun ProfileInfoScreen(
             
             // Media, Links, and Docs (placeholder for future implementation)
             ProfileSection(title = stringResource(R.string.media_links_docs)) {
-                ProfileActionItem(
-                    icon = Icons.Default.Image,
+                ProfileActionItemWithPainter(
+                    icon = painterResource(R.drawable.ic_gallery),
                     label = stringResource(R.string.media),
                     value = "0",
                     onClick = { /* TODO: Navigate to media gallery */ }
@@ -94,14 +96,14 @@ fun ProfileInfoScreen(
             // Actions Section
             ProfileSection(title = stringResource(R.string.actions)) {
                 ProfileActionItem(
-                    icon = Icons.Default.Block,
+                    icon = Icons.Default.Cancel,
                     label = stringResource(R.string.block_contact),
                     isDestructive = true,
                     onClick = { /* TODO: Block contact */ }
                 )
                 HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp))
                 ProfileActionItem(
-                    icon = Icons.Default.ThumbDown,
+                    icon = Icons.Default.Warning,
                     label = stringResource(R.string.report_contact),
                     isDestructive = true,
                     onClick = { /* TODO: Report contact */ }
@@ -239,6 +241,51 @@ private fun ProfileActionItem(
         leadingContent = {
             Icon(
                 imageVector = icon,
+                contentDescription = null,
+                tint = if (isDestructive) 
+                    MaterialTheme.colorScheme.error 
+                else 
+                    MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        },
+        headlineContent = {
+            Text(
+                label,
+                color = if (isDestructive) 
+                    MaterialTheme.colorScheme.error 
+                else 
+                    MaterialTheme.colorScheme.onSurface
+            )
+        },
+        trailingContent = value?.let {
+            {
+                Text(
+                    it,
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+        },
+        colors = ListItemDefaults.colors(
+            containerColor = MaterialTheme.colorScheme.surface
+        ),
+        modifier = Modifier.clickable(onClick = onClick)
+    )
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun ProfileActionItemWithPainter(
+    icon: Painter,
+    label: String,
+    value: String? = null,
+    isDestructive: Boolean = false,
+    onClick: () -> Unit = {}
+) {
+    ListItem(
+        leadingContent = {
+            Icon(
+                painter = icon,
                 contentDescription = null,
                 tint = if (isDestructive) 
                     MaterialTheme.colorScheme.error 
