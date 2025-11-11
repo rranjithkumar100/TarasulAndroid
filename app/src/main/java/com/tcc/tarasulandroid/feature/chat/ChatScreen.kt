@@ -731,7 +731,8 @@ fun ChatScreen(
                             coroutineScope.launch {
                                 messagesRepository.downloadMedia(mediaId)
                             }
-                        }
+                        },
+                        onImageClick = onImageClick
                     )
                     Spacer(modifier = Modifier.height(8.dp))
                 }
@@ -830,7 +831,8 @@ fun ChatScreen(
 private fun SwipeableMessageItem(
     messageWithMedia: MessageWithMediaAndReply,
     onReply: () -> Unit,
-    onDownloadClick: (String) -> Unit
+    onDownloadClick: (String) -> Unit,
+    onImageClick: (String) -> Unit = {}
 ) {
     val message = messageWithMedia.message
     val replyToMessage = messageWithMedia.replyToMessage
