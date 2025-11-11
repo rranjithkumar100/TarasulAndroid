@@ -179,9 +179,32 @@ fun ChatScreen(
             }
     }
 
+    // Helper function to reload messages after sending
+    suspend fun reloadMessages() {
+        try {
+            val updatedMessages = messagesRepository.getMessagesWithMediaAndReplyPaginated(
+                conversationId = conversationId!!,
+                limit = pageSize,
+                offset = 0
+            )
+            messages = updatedMessages
+            currentOffset = updatedMessages.size
+            
+            val totalCount = messagesRepository.getMessageCount(conversationId!!)
+            hasMoreMessages = currentOffset < totalCount
+            
+            // Scroll to bottom
+            shouldAutoScroll = true
+            listState.animateScrollToItem(messages.size - 1)
+            android.util.Log.d("ChatScreen", "Messages reloaded after media send: ${updatedMessages.size} messages")
+        } catch (e: Exception) {
+            android.util.Log.e("ChatScreen", "Error reloading messages", e)
+        }
+    }
+    
     // Track what was clicked (to relaunch after permission granted)
     var pendingMediaAction by remember { mutableStateOf<String?>(null) }
-
+    
     // Permission states
     val cameraPermissionState = rememberMultiplePermissionsState(
         permissions = MediaPermissions.getCameraPermissions()
@@ -219,6 +242,9 @@ fun ChatScreen(
                     fileName = MediaPickerHelper.getFileName(context, uri)
                 )
                 android.util.Log.d("ChatScreen", "Image sent successfully")
+                
+                // Reload messages to show the new image immediately
+                reloadMessages()
             } catch (e: Exception) {
                 android.util.Log.e("ChatScreen", "Error sending image", e)
             }
@@ -248,6 +274,9 @@ fun ChatScreen(
                     fileName = MediaPickerHelper.getFileName(context, uri)
                 )
                 android.util.Log.d("ChatScreen", "Video sent successfully")
+                
+                // Reload messages to show the new video immediately
+                reloadMessages()
             } catch (e: Exception) {
                 android.util.Log.e("ChatScreen", "Error sending video", e)
             }
@@ -268,8 +297,12 @@ fun ChatScreen(
                         mimeType = context.contentResolver.getType(it),
                         fileName = MediaPickerHelper.getFileName(context, it)
                     )
+                    android.util.Log.d("ChatScreen", "File sent successfully")
+                    
+                    // Reload messages to show the new file immediately
+                    reloadMessages()
                 } catch (e: Exception) {
-                    // Handle error
+                    android.util.Log.e("ChatScreen", "Error sending file", e)
                 }
             }
         }
@@ -289,8 +322,12 @@ fun ChatScreen(
                         mimeType = "image/jpeg",
                         fileName = "camera_${System.currentTimeMillis()}.jpg"
                     )
+                    android.util.Log.d("ChatScreen", "Camera photo sent successfully")
+                    
+                    // Reload messages to show the new camera photo immediately
+                    reloadMessages()
                 } catch (e: Exception) {
-                    // Handle error
+                    android.util.Log.e("ChatScreen", "Error sending camera photo", e)
                 }
             }
         }
@@ -356,6 +393,10 @@ fun ChatScreen(
                         contactInfo = contactInfo,
                         recipientId = contact.id
                     )
+                    android.util.Log.d("ChatScreen", "Contact sent successfully")
+                    
+                    // Reload messages to show the new contact immediately
+                    reloadMessages()
                 } catch (e: Exception) {
                     android.util.Log.e("ChatScreen", "Error sending contact", e)
                 }
