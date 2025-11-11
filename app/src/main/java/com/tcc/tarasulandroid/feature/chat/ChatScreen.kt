@@ -559,14 +559,14 @@ fun ChatScreen(
                                 }
                             },
                             modifier = Modifier.size(48.dp),
-                        containerColor = MaterialTheme.colorScheme.primary
-                    ) {
-                        Icon(
-                            Icons.AutoMirrored.Filled.Send,
-                            contentDescription = stringResource(R.string.send),
-                            tint = MaterialTheme.colorScheme.onPrimary
-                        )
-                    }
+                            containerColor = MaterialTheme.colorScheme.primary
+                        ) {
+                            Icon(
+                                Icons.AutoMirrored.Filled.Send,
+                                contentDescription = stringResource(R.string.send),
+                                tint = MaterialTheme.colorScheme.onPrimary
+                            )
+                        }
                 }
             }
         }
