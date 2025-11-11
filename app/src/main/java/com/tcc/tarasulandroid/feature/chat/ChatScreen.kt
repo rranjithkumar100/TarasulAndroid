@@ -110,11 +110,21 @@ fun ChatScreen(
     }
 
     val listState = rememberLazyListState()
+    
+    // Track if this is the first load to avoid animation lag
+    var isFirstLoad by remember { mutableStateOf(true) }
 
     // Auto-scroll to bottom when new messages arrive
     LaunchedEffect(messages.size) {
         if (messages.isNotEmpty() && shouldAutoScroll) {
-            listState.animateScrollToItem(messages.size - 1)
+            if (isFirstLoad) {
+                // Jump instantly on first load to avoid lag
+                listState.scrollToItem(messages.size - 1)
+                isFirstLoad = false
+            } else {
+                // Animate on subsequent updates
+                listState.animateScrollToItem(messages.size - 1)
+            }
             shouldAutoScroll = false
         }
     }
@@ -193,9 +203,12 @@ fun ChatScreen(
             val totalCount = messagesRepository.getMessageCount(conversationId!!)
             hasMoreMessages = currentOffset < totalCount
             
-            // Scroll to bottom
+            // Ensure isFirstLoad is false so we use animation
+            isFirstLoad = false
+            
+            // Scroll to bottom with animation
             shouldAutoScroll = true
-            listState.animateScrollToItem(messages.size - 1)
+            
             android.util.Log.d("ChatScreen", "Messages reloaded after media send: ${updatedMessages.size} messages")
         } catch (e: Exception) {
             android.util.Log.e("ChatScreen", "Error reloading messages", e)
@@ -404,6 +417,20 @@ fun ChatScreen(
         }
     }
 
+    // Auto re-check permissions and request if needed
+    LaunchedEffect(Unit) {
+        kotlinx.coroutines.delay(500) // Small delay to let UI settle
+        android.util.Log.d("ChatScreen", "Checking permission states...")
+        android.util.Log.d("ChatScreen", "  - Camera: ${cameraPermissionState.allPermissionsGranted}")
+        android.util.Log.d("ChatScreen", "  - Media: ${mediaPermissionsState.allPermissionsGranted}")
+        android.util.Log.d("ChatScreen", "  - Contacts: ${contactsPermissionState.allPermissionsGranted}")
+        
+        // Log detailed permission status
+        mediaPermissionsState.permissionsStatus.forEach { (permission, granted) ->
+            android.util.Log.d("ChatScreen", "    Permission: $permission = $granted")
+        }
+    }
+    
     // Watch for permission grants and auto-launch pickers
     LaunchedEffect(
         cameraPermissionState.allPermissionsGranted,
@@ -683,12 +710,18 @@ fun ChatScreen(
             onGalleryClick = {
                 android.util.Log.d("ChatScreen", "Gallery clicked")
                 android.util.Log.d("ChatScreen", "Media permissions granted: ${mediaPermissionsState.allPermissionsGranted}")
+                
+                // Log individual permission states for debugging
+                mediaPermissionsState.permissionsStatus.forEach { (permission, granted) ->
+                    android.util.Log.d("ChatScreen", "  - $permission: $granted")
+                }
 
                 if (mediaPermissionsState.allPermissionsGranted) {
                     android.util.Log.d("ChatScreen", "Launching image picker")
                     imagePickerLauncher.launch(Unit)
                 } else {
                     android.util.Log.d("ChatScreen", "Requesting media permissions")
+                    android.util.Log.d("ChatScreen", "Permissions to request: ${MediaPermissions.getMediaPermissions()}")
                     pendingMediaAction = "gallery"
                     mediaPermissionsState.requestPermissions()
                 }
@@ -696,12 +729,18 @@ fun ChatScreen(
             onVideoClick = {
                 android.util.Log.d("ChatScreen", "Video clicked")
                 android.util.Log.d("ChatScreen", "Media permissions granted: ${mediaPermissionsState.allPermissionsGranted}")
+                
+                // Log individual permission states for debugging
+                mediaPermissionsState.permissionsStatus.forEach { (permission, granted) ->
+                    android.util.Log.d("ChatScreen", "  - $permission: $granted")
+                }
 
                 if (mediaPermissionsState.allPermissionsGranted) {
                     android.util.Log.d("ChatScreen", "Launching video picker")
                     videoPickerLauncher.launch(Unit)
                 } else {
                     android.util.Log.d("ChatScreen", "Requesting media permissions")
+                    android.util.Log.d("ChatScreen", "Permissions to request: ${MediaPermissions.getMediaPermissions()}")
                     pendingMediaAction = "video"
                     mediaPermissionsState.requestPermissions()
                 }

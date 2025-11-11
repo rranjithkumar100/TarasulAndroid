@@ -67,11 +67,31 @@ fun rememberMultiplePermissionsState(
     val launcher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.RequestMultiplePermissions()
     ) { results ->
-        permissionsStatus = results
-        onPermissionsResult(results)
+        // Update the permission status with actual results from the system
+        val updatedStatus = permissions.associateWith { permission ->
+            ContextCompat.checkSelfPermission(
+                context,
+                permission
+            ) == PackageManager.PERMISSION_GRANTED
+        }
+        permissionsStatus = updatedStatus
+        onPermissionsResult(updatedStatus)
     }
     
-    return remember(permissions) {
+    // Check permissions on every recomposition to catch external grants
+    LaunchedEffect(Unit) {
+        val currentStatus = permissions.associateWith { permission ->
+            ContextCompat.checkSelfPermission(
+                context,
+                permission
+            ) == PackageManager.PERMISSION_GRANTED
+        }
+        if (currentStatus != permissionsStatus) {
+            permissionsStatus = currentStatus
+        }
+    }
+    
+    return remember(permissions, permissionsStatus) {
         MultiplePermissionsState(
             permissions = permissions,
             permissionsStatus = permissionsStatus,
