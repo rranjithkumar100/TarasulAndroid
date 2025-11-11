@@ -558,7 +558,8 @@ fun ChatScreen(
                                         } catch (_: Exception) { }
                                     }
                                 }
-                            },
+                            }
+                        },
                         modifier = Modifier.size(48.dp),
                         containerColor = MaterialTheme.colorScheme.primary
                     ) {
