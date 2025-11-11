@@ -16,7 +16,6 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.Send
-import androidx.compose.material.icons.filled.Reply
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.runtime.snapshotFlow
@@ -739,7 +738,7 @@ private fun SwipeableMessageItem(
         // Reply icon that appears during swipe
         if (abs(offsetX.value) > 20f) {
             Icon(
-                imageVector = Icons.Default.Reply,
+                painter = painterResource(R.drawable.ic_chat),
                 contentDescription = stringResource(R.string.reply),
                 tint = MaterialTheme.colorScheme.primary,
                 modifier = Modifier
