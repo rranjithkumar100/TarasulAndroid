@@ -96,7 +96,7 @@ fun ProfileInfoScreen(
             // Actions Section
             ProfileSection(title = stringResource(R.string.actions)) {
                 ProfileActionItem(
-                    icon = Icons.Default.Cancel,
+                    icon = Icons.Default.Close,
                     label = stringResource(R.string.block_contact),
                     isDestructive = true,
                     onClick = { /* TODO: Block contact */ }
