@@ -218,7 +218,7 @@ class MessagesRepository @Inject constructor(
         recipientId: String,
         replyToMessageId: String? = null
     ) = withContext(Dispatchers.IO) {
-        android.util.Log.d("MessagesRepository", "sendMessage called - conversationId: $conversationId, content: $content, recipientId: $recipientId")
+        android.util.Log.d("MessagesRepository", "sendMessage called - conversationId: $conversationId, content: $content, recipientId: $recipientId, replyToMessageId: $replyToMessageId")
         
         val currentUserId = securePreferencesManager.getUserEmail() ?: "me"
         android.util.Log.d("MessagesRepository", "currentUserId: $currentUserId")
@@ -249,7 +249,8 @@ class MessagesRepository @Inject constructor(
             isRead = false,
             isMine = true,
             direction = MessageDirection.OUTGOING,
-            status = MessageStatus.PENDING
+            status = MessageStatus.PENDING,
+            replyToMessageId = replyToMessageId
         )
         
         android.util.Log.d("MessagesRepository", "Inserting message: ${message.id}, content: ${message.content}")

@@ -702,6 +702,9 @@ private fun SwipeableMessageItem(
     val replyToMessage = messageWithMedia.replyToMessage
     val isOutgoing = message.direction == com.tcc.tarasulandroid.data.db.MessageDirection.OUTGOING
     
+    // Debug logging
+    android.util.Log.d("MessageBubble", "Message ID: ${message.id}, has reply: ${replyToMessage != null}, replyToMessageId: ${message.replyToMessageId}")
+    
     // Animation states
     val offsetX = remember { Animatable(0f) }
     val iconScale = remember { Animatable(0f) }
