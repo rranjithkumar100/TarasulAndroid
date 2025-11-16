@@ -15,19 +15,7 @@ import com.tcc.tarasulandroid.data.MessageWithMediaAndReply
 
 /**
  * Scrollable list of chat messages with loading indicators.
- *
- * Features:
- * - Reversed list (newest at bottom)
- * - Loading indicator for pagination
- * - Empty state
- * - Swipeable message items
- *
- * @param messages List of messages to display
- * @param listState LazyList scroll state
- * @param isLoadingMore Whether more messages are being loaded
- * @param onReply Callback when user swipes to reply
- * @param onDownloadClick Callback for media download
- * @param onImageClick Callback when image is clicked
+ * FIXED: Removed reverseLayout and .reversed() to fix scroll jump issues with media
  */
 @Composable
 fun ChatMessagesList(
@@ -42,26 +30,12 @@ fun ChatMessagesList(
     LazyColumn(
         state = listState,
         modifier = modifier.fillMaxSize(),
-        reverseLayout = true, // Newest messages at bottom
-        contentPadding = PaddingValues(bottom = 8.dp)
+        reverseLayout = false, // CHANGED: Normal layout
+        contentPadding = PaddingValues(vertical = 8.dp)
     ) {
-        // Messages
-        items(
-            items = messages.reversed(), // Display newest first (bottom)
-            key = { it.message.id }
-        ) { messageWithMedia ->
-            SwipeableMessageItem(
-                messageWithMedia = messageWithMedia,
-                onReply = { onReply(messageWithMedia) },
-                onDownloadClick = onDownloadClick,
-                onImageClick = onImageClick
-            )
-            Spacer(modifier = Modifier.height(8.dp))
-        }
-        
-        // Loading indicator for pagination
+        // Loading indicator at TOP for older messages
         if (isLoadingMore) {
-            item {
+            item(key = "loading_indicator") {
                 Box(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -75,10 +49,10 @@ fun ChatMessagesList(
                 }
             }
         }
-        
+
         // Empty state
         if (messages.isEmpty() && !isLoadingMore) {
-            item {
+            item(key = "empty_state") {
                 Box(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -92,6 +66,20 @@ fun ChatMessagesList(
                     )
                 }
             }
+        }
+
+        // Messages in NORMAL order (oldest to newest)
+        items(
+            items = messages, // CHANGED: No .reversed()
+            key = { it.message.id }
+        ) { messageWithMedia ->
+            SwipeableMessageItem(
+                messageWithMedia = messageWithMedia,
+                onReply = { onReply(messageWithMedia) },
+                onDownloadClick = onDownloadClick,
+                onImageClick = onImageClick
+            )
+            Spacer(modifier = Modifier.height(8.dp))
         }
     }
 }

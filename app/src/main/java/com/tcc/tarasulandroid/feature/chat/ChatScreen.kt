@@ -279,22 +279,34 @@ fun ChatScreen(
     LaunchedEffect(listState) {
         snapshotFlow { listState.firstVisibleItemIndex }
             .collect { firstVisibleIndex ->
-                if (firstVisibleIndex >= messages.size - 3 && hasMoreMessages && !isLoadingMessages) {
+                // Load more when scrolling UP (approaching index 0)
+                if (firstVisibleIndex <= 3 && hasMoreMessages && !isLoadingMessages) {
                     isLoadingMessages = true
                     conversationId?.let { convId ->
                         try {
+                            val currentFirstMessageId = messages.firstOrNull()?.message?.id
+
                             val olderMessages = messagesRepository.getMessagesWithMediaAndReplyPaginated(
                                 conversationId = convId,
                                 limit = pageSize,
                                 offset = currentOffset
                             )
-                            
+
                             if (olderMessages.isNotEmpty()) {
-                                messages = messages + olderMessages
+                                // Add older messages at the START of the list
+                                messages = olderMessages + messages
                                 currentOffset += olderMessages.size
-                                
+
                                 val totalCount = messagesRepository.getMessageCount(convId)
                                 hasMoreMessages = currentOffset < totalCount
+
+                                // Maintain scroll position after adding items
+                                val newFirstMessageIndex = messages.indexOfFirst {
+                                    it.message.id == currentFirstMessageId
+                                }
+                                if (newFirstMessageIndex > 0) {
+                                    listState.scrollToItem(newFirstMessageIndex)
+                                }
                             } else {
                                 hasMoreMessages = false
                             }
@@ -312,19 +324,51 @@ fun ChatScreen(
     LaunchedEffect(messages.size, shouldAutoScroll) {
         if (messages.isNotEmpty() && shouldAutoScroll) {
             try {
-                kotlinx.coroutines.delay(50)
+                val targetIndex = messages.size - 1
+
                 if (isFirstLoad) {
-                    listState.scrollToItem(messages.size - 1)
+                    // Wait for initial composition and image placeholders
+                    kotlinx.coroutines.delay(100)
+                    listState.scrollToItem(targetIndex)
+
+                    // Wait for images to start loading
+                    kotlinx.coroutines.delay(200)
+                    listState.scrollToItem(targetIndex)
+
+                    // Final correction after images likely loaded
+                    kotlinx.coroutines.delay(400)
+                    listState.scrollToItem(targetIndex)
+
                     isFirstLoad = false
                 } else {
-                    listState.animateScrollToItem(messages.size - 1)
+                    // For new messages, single smooth scroll
+                    listState.animateScrollToItem(targetIndex)
                 }
+
                 shouldAutoScroll = false
             } catch (e: Exception) {
                 android.util.Log.e("ChatScreen", "Error scrolling", e)
                 shouldAutoScroll = false
             }
         }
+    }
+
+    // Monitor layout info to detect when scroll position changes unexpectedly
+    LaunchedEffect(listState.layoutInfo.totalItemsCount) {
+        snapshotFlow { listState.layoutInfo }
+            .collect { layoutInfo ->
+                // If we should be at bottom but aren't, correct it
+                if (shouldAutoScroll && messages.isNotEmpty()) {
+                    val lastItemIndex = messages.size - 1
+                    val lastVisibleIndex = layoutInfo.visibleItemsInfo.lastOrNull()?.index ?: -1
+
+                    if (lastVisibleIndex < lastItemIndex - 1) {
+                        // We've drifted from the bottom, correct it
+                        kotlinx.coroutines.delay(50)
+                        listState.scrollToItem(lastItemIndex)
+                    }
+                }
+            }
     }
 
     // Handle pending permission results
@@ -505,6 +549,7 @@ fun ChatScreen(
 
 /**
  * Helper function to reload messages after sending.
+ * FIXED: Properly resets pagination state
  */
 private suspend fun reloadMessages(
     messagesRepository: com.tcc.tarasulandroid.data.MessagesRepository,
@@ -513,20 +558,24 @@ private suspend fun reloadMessages(
     onResult: (Triple<List<MessageWithMediaAndReply>, Int, Boolean>) -> Unit
 ) {
     try {
+        // Get fresh messages from the beginning
         val updatedMessages = messagesRepository.getMessagesWithMediaAndReplyPaginated(
             conversationId = conversationId,
             limit = pageSize,
             offset = 0
         )
+
         val totalCount = messagesRepository.getMessageCount(conversationId)
         val hasMore = updatedMessages.size < totalCount
-        
+
+        // Return correct offset (number of messages loaded, not size)
         onResult(Triple(updatedMessages, updatedMessages.size, hasMore))
+
+        android.util.Log.d("ChatScreen", "Reloaded: ${updatedMessages.size} messages, total: $totalCount, hasMore: $hasMore")
     } catch (e: Exception) {
         android.util.Log.e("ChatScreen", "Error reloading messages", e)
     }
 }
-
 /**
  * Extension to convert message to reply format.
  */

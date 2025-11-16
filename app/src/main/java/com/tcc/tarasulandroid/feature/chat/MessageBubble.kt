@@ -127,7 +127,9 @@ private fun ImageMessageContent(
                         model = File(media.localPath),
                         contentDescription = stringResource(R.string.image_message),
                         modifier = Modifier
-                            .fillMaxSize()
+                            .fillMaxWidth()
+                            .heightIn(min = 200.dp, max = 300.dp) // Add fixed height constraints
+                            .aspectRatio(1f) // Or use aspect ratio like 16/9f
                             .clickable { onImageClick(media.localPath) },
                         contentScale = ContentScale.Crop
                     )
@@ -233,7 +235,8 @@ private fun VideoMessageContent(
                 model = File(media.thumbnailPath),
                 contentDescription = null,
                 modifier = Modifier
-                    .fillMaxSize()
+                    .fillMaxWidth()
+                    .height(200.dp)
                     .blur(
                         radius = 20.dp,
                         edgeTreatment = BlurredEdgeTreatment.Unbounded
@@ -249,7 +252,9 @@ private fun VideoMessageContent(
                 AsyncImage(
                     model = File(media.thumbnailPath),
                     contentDescription = stringResource(R.string.video_thumbnail),
-                    modifier = Modifier.fillMaxSize(),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(200.dp), // Fixed height
                     contentScale = ContentScale.Fit
                 )
                 
