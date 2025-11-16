@@ -64,7 +64,7 @@ fun LoginScreen(
 
     LaunchedEffect(Unit) {
         viewModel.loginResult.collect {
-            navController.navigate("home") {
+            navController.navigate("otp_verification") {
                 popUpTo("login") { inclusive = true }
             }
         }

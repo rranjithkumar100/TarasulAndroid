@@ -16,6 +16,7 @@ import com.tcc.tarasulandroid.feature.contacts.ContactListScreen
 import com.tcc.tarasulandroid.feature.home.model.Contact
 import com.tcc.tarasulandroid.feature.home.ui.HomeScreen
 import com.tcc.tarasulandroid.feature.login.LoginScreen
+import com.tcc.tarasulandroid.feature.login.OtpVerificationScreen
 
 @Composable
 fun NavGraph(
@@ -32,6 +33,10 @@ fun NavGraph(
             LoginScreen(navController = navController)
         }
         
+        composable("otp_verification") {
+            OtpVerificationScreen(navController = navController)
+        }
+
         composable("home") {
             HomeScreen(navController = navController)
         }
