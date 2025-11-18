@@ -109,12 +109,13 @@ fun SwipeableMessageItem(
                             val resistance = 1f - (abs(currentOffset) / maxSwipe).coerceIn(0f, 0.7f)
                             val adjustedDragAmount = dragAmount * resistance
                             val finalOffset = currentOffset + adjustedDragAmount
-                            
-                            // Constrain direction based on message type
+                            // Constrain swipe direction based on message type
+                            //TODO: change the direction - if need for arabic other wise remove this
                             val constrainedOffset = if (isOutgoing) {
-                                finalOffset.coerceIn(-maxSwipe, 0f) // Left swipe only
-                            } else {
                                 finalOffset.coerceIn(0f, maxSwipe)  // Right swipe only
+
+                            } else {
+                                finalOffset.coerceIn(-maxSwipe, 0f) // Left swipe only
                             }
                             
                             offsetX.snapTo(constrainedOffset)
