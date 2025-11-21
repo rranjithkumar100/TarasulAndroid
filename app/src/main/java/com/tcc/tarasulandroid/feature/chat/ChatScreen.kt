@@ -220,19 +220,26 @@ fun ChatScreen(
             conversationId?.let { convId ->
                 coroutineScope.launch {
                     try {
-                        messagesRepository.sendMediaMessage(
-                            conversationId = convId,
-                            recipientId = contact.id,
-                            mediaUri = uri,
-                            mediaType = com.tcc.tarasulandroid.data.db.MessageType.CONTACT,
-                            caption = replyToMessage?.messageId ?: ""
-                        )
-                        reloadMessages(messagesRepository, convId, pageSize) {
-                            messages = it.first
-                            currentOffset = it.second
-                            hasMoreMessages = it.third
-                            isFirstLoad = false
-                            shouldAutoScroll = true
+                        // Extract contact information from the URI
+                        val contactInfo = MediaPickerHelper.getContactInfo(context, uri)
+                        if (contactInfo != null) {
+                            android.util.Log.d("ChatScreen", "Sending contact: ${contactInfo.name}")
+                            messagesRepository.sendContactMessage(
+                                conversationId = convId,
+                                contactInfo = contactInfo,
+                                recipientId = contact.id,
+                                replyToMessageId = replyToMessage?.messageId
+                            )
+                            android.util.Log.d("ChatScreen", "Contact sent successfully")
+                            reloadMessages(messagesRepository, convId, pageSize) {
+                                messages = it.first
+                                currentOffset = it.second
+                                hasMoreMessages = it.third
+                                isFirstLoad = false
+                                shouldAutoScroll = true
+                            }
+                        } else {
+                            android.util.Log.e("ChatScreen", "Failed to extract contact information")
                         }
                     } catch (e: Exception) {
                         android.util.Log.e("ChatScreen", "Error sending contact", e)
@@ -433,6 +440,19 @@ fun ChatScreen(
                                         content = messageText,
                                         replyToMessageId = replyToMessage?.messageId
                                     )
+
+                                    // TEST: Echo incoming message (remove later)
+                                    kotlinx.coroutines.delay(500)
+                                    try {
+                                        messagesRepository.receiveTestMessage(
+                                            conversationId = conversationId!!,
+                                            senderId = contact.id,
+                                            content = messageText
+                                        )
+                                    } catch (e: Exception) {
+                                        android.util.Log.e("ChatScreen", "Error creating test incoming message", e)
+                                    }
+
                                     messageText = ""
                                     replyToMessage = null
                                     

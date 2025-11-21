@@ -178,4 +178,62 @@ object MediaPickerHelper {
     fun getMimeType(context: Context, uri: Uri): String? {
         return context.contentResolver.getType(uri)
     }
+
+    /**
+     * Extract contact information from a contact URI
+     * Returns name and phone numbers from the selected contact
+     */
+    fun getContactInfo(context: Context, contactUri: Uri): com.tcc.tarasulandroid.data.ContactInfo? {
+        return try {
+            var name = ""
+            var contactId = ""
+
+            // First, get contact name and ID from the URI
+            context.contentResolver.query(
+                contactUri,
+                arrayOf(
+                    ContactsContract.Contacts._ID,
+                    ContactsContract.Contacts.DISPLAY_NAME,
+                    ContactsContract.Contacts.PHOTO_URI
+                ),
+                null,
+                null,
+                null
+            )?.use { cursor ->
+                if (cursor.moveToFirst()) {
+                    contactId = cursor.getString(0)
+                    name = cursor.getString(1) ?: ""
+                }
+            }
+
+            if (contactId.isEmpty() || name.isEmpty()) {
+                return null
+            }
+
+            // Now get phone numbers for this contact
+            val phoneNumbers = mutableListOf<String>()
+            context.contentResolver.query(
+                ContactsContract.CommonDataKinds.Phone.CONTENT_URI,
+                arrayOf(ContactsContract.CommonDataKinds.Phone.NUMBER),
+                "${ContactsContract.CommonDataKinds.Phone.CONTACT_ID} = ?",
+                arrayOf(contactId),
+                null
+            )?.use { cursor ->
+                while (cursor.moveToNext()) {
+                    val phoneNumber = cursor.getString(0)
+                    if (phoneNumber != null) {
+                        phoneNumbers.add(phoneNumber)
+                    }
+                }
+            }
+
+            com.tcc.tarasulandroid.data.ContactInfo(
+                name = name,
+                phoneNumbers = phoneNumbers
+            )
+        } catch (e: Exception) {
+            android.util.Log.e("MediaPickerHelper", "Error extracting contact info", e)
+            null
+        }
+    }
 }
