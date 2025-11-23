@@ -1,6 +1,3 @@
-// ============================================
-// FILE 1: ChatScreen.kt
-// ============================================
 package com.tcc.tarasulandroid.feature.chat
 
 import android.net.Uri
@@ -45,6 +42,8 @@ fun ChatScreen(
     var replyToMessage by remember { mutableStateOf<ReplyMessage?>(null) }
     var isFirstLoad by remember { mutableStateOf(true) }
     var pendingMediaAction by remember { mutableStateOf<String?>(null) }
+    var userHasScrolled by remember { mutableStateOf(false) }
+    var isPaginating by remember { mutableStateOf(false) }
 
     val listState = rememberLazyListState()
     val pageSize = 20
@@ -94,12 +93,12 @@ fun ChatScreen(
                             caption = replyToMessage?.messageId ?: ""
                         )
                         android.util.Log.d("ChatScreen", "Image sent successfully")
-                        reloadMessages(messagesRepository, convId, pageSize) {
+                        reloadMessages(messagesRepository, convId, pageSize, userHasScrolled) {
                             messages = it.first
                             currentOffset = it.second
                             hasMoreMessages = it.third
                             isFirstLoad = false
-                            shouldAutoScroll = true
+                            shouldAutoScroll = it.fourth
                         }
                     } catch (e: Exception) {
                         android.util.Log.e("ChatScreen", "Error sending image", e)
@@ -131,12 +130,12 @@ fun ChatScreen(
                             mediaType = com.tcc.tarasulandroid.data.db.MessageType.VIDEO,
                             caption = replyToMessage?.messageId ?: ""
                         )
-                        reloadMessages(messagesRepository, convId, pageSize) {
+                        reloadMessages(messagesRepository, convId, pageSize, userHasScrolled) {
                             messages = it.first
                             currentOffset = it.second
                             hasMoreMessages = it.third
                             isFirstLoad = false
-                            shouldAutoScroll = true
+                            shouldAutoScroll = it.fourth
                         }
                     } catch (e: Exception) {
                         android.util.Log.e("ChatScreen", "Error sending video", e)
@@ -159,12 +158,12 @@ fun ChatScreen(
                             mediaType = com.tcc.tarasulandroid.data.db.MessageType.FILE,
                             caption = replyToMessage?.messageId ?: ""
                         )
-                        reloadMessages(messagesRepository, convId, pageSize) {
+                        reloadMessages(messagesRepository, convId, pageSize, userHasScrolled) {
                             messages = it.first
                             currentOffset = it.second
                             hasMoreMessages = it.third
                             isFirstLoad = false
-                            shouldAutoScroll = true
+                            shouldAutoScroll = it.fourth
                         }
                     } catch (e: Exception) {
                         android.util.Log.e("ChatScreen", "Error sending file", e)
@@ -189,12 +188,12 @@ fun ChatScreen(
                             mediaType = com.tcc.tarasulandroid.data.db.MessageType.IMAGE,
                             caption = replyToMessage?.messageId ?: ""
                         )
-                        reloadMessages(messagesRepository, convId, pageSize) {
+                        reloadMessages(messagesRepository, convId, pageSize, userHasScrolled) {
                             messages = it.first
                             currentOffset = it.second
                             hasMoreMessages = it.third
                             isFirstLoad = false
-                            shouldAutoScroll = true
+                            shouldAutoScroll = it.fourth
                         }
                     } catch (e: Exception) {
                         android.util.Log.e("ChatScreen", "Error sending camera image", e)
@@ -220,12 +219,12 @@ fun ChatScreen(
                                 replyToMessageId = replyToMessage?.messageId
                             )
                             android.util.Log.d("ChatScreen", "Contact sent successfully")
-                            reloadMessages(messagesRepository, convId, pageSize) {
+                            reloadMessages(messagesRepository, convId, pageSize, userHasScrolled) {
                                 messages = it.first
                                 currentOffset = it.second
                                 hasMoreMessages = it.third
                                 isFirstLoad = false
-                                shouldAutoScroll = true
+                                shouldAutoScroll = it.fourth
                             }
                         } else {
                             android.util.Log.e("ChatScreen", "Failed to extract contact information")
@@ -264,6 +263,8 @@ fun ChatScreen(
 
                 isLoadingMessages = false
                 shouldAutoScroll = true
+
+                android.util.Log.d("ChatScreen", "📱 INITIAL LOAD: ${messages.size} messages loaded")
             }
         } catch (e: Exception) {
             android.util.Log.e("ChatScreen", "Error loading conversation", e)
@@ -271,24 +272,71 @@ fun ChatScreen(
         }
     }
 
-    // Pagination detection - OPTIMIZED
+    // Detect when user manually scrolls to disable auto-scroll PERMANENTLY
     LaunchedEffect(listState) {
         snapshotFlow {
-            // Only check first visible index, don't check isScrollInProgress
-            // This reduces the number of collections
+            listState.firstVisibleItemIndex to listState.isScrollInProgress
+        }
+            .collect { (firstIndex, isScrolling) ->
+                // Skip monitoring during pagination
+                if (isPaginating) {
+                    android.util.Log.d("ChatScreen", "📍 Skipping scroll monitoring during pagination")
+                    return@collect
+                }
+
+                if (messages.isNotEmpty() && !isFirstLoad) {
+                    val lastIndex = messages.size - 1
+
+                    // Check if user is NOT at the bottom
+                    val lastVisibleIndex = listState.layoutInfo.visibleItemsInfo.lastOrNull()?.index ?: 0
+                    val isAtBottom = lastVisibleIndex >= lastIndex - 1
+
+                    android.util.Log.d("ChatScreen", "📍 Scroll state: firstIndex=$firstIndex, lastVisible=$lastVisibleIndex, lastIndex=$lastIndex, isAtBottom=$isAtBottom, isScrolling=$isScrolling")
+
+                    // If scrolling and NOT at bottom, user has scrolled away
+                    if (isScrolling && !isAtBottom) {
+                        if (!userHasScrolled) {
+                            android.util.Log.d("ChatScreen", "🔴 USER SCROLLED AWAY - Disabling auto-scroll permanently")
+                        }
+                        userHasScrolled = true
+                        shouldAutoScroll = false
+                    }
+
+                    // Also check if viewing old messages (far from bottom)
+                    if (!isAtBottom && firstIndex < lastIndex - 5) {
+                        if (!userHasScrolled) {
+                            android.util.Log.d("ChatScreen", "🔴 USER VIEWING OLD MESSAGES - Disabling auto-scroll permanently")
+                        }
+                        userHasScrolled = true
+                        shouldAutoScroll = false
+                    }
+                }
+            }
+    }
+
+    // Pagination detection
+    LaunchedEffect(listState) {
+        snapshotFlow {
             listState.firstVisibleItemIndex
         }
             .collect { firstVisibleIndex ->
-                // Load more when near the top
                 if (firstVisibleIndex <= 3 &&
                     hasMoreMessages &&
                     !isLoadingMessages &&
-                    !shouldAutoScroll) {
+                    !isFirstLoad &&
+                    !isPaginating) {
 
+                    android.util.Log.d("ChatScreen", "📄 PAGINATION TRIGGERED at index $firstVisibleIndex")
+
+                    isPaginating = true
                     isLoadingMessages = true
                     conversationId?.let { convId ->
                         try {
                             val currentFirstMessageId = messages.firstOrNull()?.message?.id
+                            val currentFirstIndex = firstVisibleIndex
+                            val currentScrollOffset = listState.firstVisibleItemScrollOffset
+
+                            android.util.Log.d("ChatScreen", "📄 Before pagination: currentFirstIndex=$currentFirstIndex, scrollOffset=$currentScrollOffset")
 
                             val olderMessages = messagesRepository.getMessagesWithMediaAndReplyPaginated(
                                 conversationId = convId,
@@ -303,52 +351,86 @@ fun ChatScreen(
                                 val totalCount = messagesRepository.getMessageCount(convId)
                                 hasMoreMessages = currentOffset < totalCount
 
-                                // Maintain scroll position
-                                val newFirstMessageIndex = messages.indexOfFirst {
-                                    it.message.id == currentFirstMessageId
-                                }
-                                if (newFirstMessageIndex > 0) {
-                                    listState.scrollToItem(newFirstMessageIndex)
-                                }
+                                android.util.Log.d("ChatScreen", "📄 Loaded ${olderMessages.size} older messages. Total now: ${messages.size}")
+
+                                // Wait for recomposition
+                                kotlinx.coroutines.delay(50)
+
+                                // Calculate new index (add the number of items we inserted)
+                                val newIndex = currentFirstIndex + olderMessages.size
+
+                                android.util.Log.d("ChatScreen", "📄 Scrolling to new index: $newIndex (old: $currentFirstIndex + added: ${olderMessages.size})")
+
+                                // Maintain exact scroll position
+                                listState.scrollToItem(
+                                    index = newIndex,
+                                    scrollOffset = currentScrollOffset
+                                )
+
+                                // Wait a bit more to ensure scroll is complete
+                                kotlinx.coroutines.delay(100)
+
+                                android.util.Log.d("ChatScreen", "📄 ✅ Pagination complete, maintained scroll position")
                             } else {
                                 hasMoreMessages = false
+                                android.util.Log.d("ChatScreen", "📄 No more messages to load")
                             }
                         } catch (e: java.util.concurrent.CancellationException) {
-                            android.util.Log.d("ChatScreen", "Pagination cancelled")
+                            android.util.Log.d("ChatScreen", "⚠️ Pagination cancelled")
                         } catch (e: Exception) {
-                            android.util.Log.e("ChatScreen", "Error loading more messages", e)
+                            android.util.Log.e("ChatScreen", "❌ Error loading more messages", e)
                         } finally {
                             isLoadingMessages = false
+                            // Re-enable scroll monitoring after a delay
+                            kotlinx.coroutines.delay(200)
+                            isPaginating = false
+                            android.util.Log.d("ChatScreen", "📄 Pagination state cleared")
                         }
                     }
                 }
             }
     }
 
-    // Auto-scroll - SIMPLIFIED
+    // Auto-scroll - ONLY on first load or when sending new messages
     LaunchedEffect(messages.size) {
-        if (messages.isNotEmpty() && shouldAutoScroll) {
+        android.util.Log.d("ChatScreen", "📊 AUTO-SCROLL CHECK: size=${messages.size}, shouldAutoScroll=$shouldAutoScroll, userHasScrolled=$userHasScrolled, isFirstLoad=$isFirstLoad")
+
+        if (messages.isNotEmpty() && shouldAutoScroll && !userHasScrolled) {
             try {
                 val targetIndex = messages.size - 1
 
+                android.util.Log.d("ChatScreen", "✅ AUTO-SCROLLING to bottom (index $targetIndex)")
+
                 if (isFirstLoad) {
-                    // Initial load - wait for layout
-                    kotlinx.coroutines.delay(200)
+                    // Initial load - wait for layout and images
+                    kotlinx.coroutines.delay(400)
                     listState.scrollToItem(targetIndex)
+
+                    // Wait for images to render
+                    kotlinx.coroutines.delay(400)
+
+                    // Final scroll
+                    listState.scrollToItem(targetIndex)
+
                     isFirstLoad = false
+                    shouldAutoScroll = false
+                    android.util.Log.d("ChatScreen", "✅ FIRST LOAD COMPLETE - auto-scroll disabled")
                 } else {
                     // New message - smooth scroll
                     listState.animateScrollToItem(targetIndex)
+                    shouldAutoScroll = false
+                    android.util.Log.d("ChatScreen", "✅ NEW MESSAGE SCROLL COMPLETE - auto-scroll disabled")
                 }
-
-                shouldAutoScroll = false
             } catch (e: java.util.concurrent.CancellationException) {
-                android.util.Log.d("ChatScreen", "Auto-scroll cancelled")
+                android.util.Log.d("ChatScreen", "⚠️ Auto-scroll CANCELLED by user interaction")
                 shouldAutoScroll = false
+                userHasScrolled = true
             } catch (e: Exception) {
-                android.util.Log.e("ChatScreen", "Error scrolling", e)
+                android.util.Log.e("ChatScreen", "❌ Error during auto-scroll", e)
                 shouldAutoScroll = false
             }
+        } else {
+            android.util.Log.d("ChatScreen", "⏭️ SKIPPING auto-scroll (conditions not met)")
         }
     }
 
@@ -415,7 +497,7 @@ fun ChatScreen(
                                         replyToMessageId = replyToMessage?.messageId
                                     )
 
-                                    // TEST: Echo incoming message (remove later)
+                                    // TEST: Echo incoming message
                                     kotlinx.coroutines.delay(500)
                                     try {
                                         messagesRepository.receiveTestMessage(
@@ -430,12 +512,12 @@ fun ChatScreen(
                                     messageText = ""
                                     replyToMessage = null
 
-                                    reloadMessages(messagesRepository, conversationId!!, pageSize) {
+                                    reloadMessages(messagesRepository, conversationId!!, pageSize, userHasScrolled) {
                                         messages = it.first
                                         currentOffset = it.second
                                         hasMoreMessages = it.third
                                         isFirstLoad = false
-                                        shouldAutoScroll = true
+                                        shouldAutoScroll = it.fourth
                                     }
                                 } catch (e: Exception) {
                                     android.util.Log.e("ChatScreen", "Error sending message", e)
@@ -541,11 +623,16 @@ fun ChatScreen(
     }
 }
 
+/**
+ * Helper function to reload messages after sending.
+ * Returns: (messages, offset, hasMore, shouldAutoScroll)
+ */
 private suspend fun reloadMessages(
     messagesRepository: com.tcc.tarasulandroid.data.MessagesRepository,
     conversationId: String,
     pageSize: Int,
-    onResult: (Triple<List<MessageWithMediaAndReply>, Int, Boolean>) -> Unit
+    userHasScrolled: Boolean,
+    onResult: (Quadruple<List<MessageWithMediaAndReply>, Int, Boolean, Boolean>) -> Unit
 ) {
     try {
         val updatedMessages = messagesRepository.getMessagesWithMediaAndReplyPaginated(
@@ -557,14 +644,30 @@ private suspend fun reloadMessages(
         val totalCount = messagesRepository.getMessageCount(conversationId)
         val hasMore = updatedMessages.size < totalCount
 
-        onResult(Triple(updatedMessages, updatedMessages.size, hasMore))
+        // Only enable auto-scroll if user hasn't manually scrolled away
+        val shouldAutoScroll = !userHasScrolled
 
-        android.util.Log.d("ChatScreen", "Reloaded: ${updatedMessages.size} messages, total: $totalCount, hasMore: $hasMore")
+        onResult(Quadruple(updatedMessages, updatedMessages.size, hasMore, shouldAutoScroll))
+
+        android.util.Log.d("ChatScreen", "💾 RELOAD: ${updatedMessages.size} messages, total: $totalCount, hasMore: $hasMore, willAutoScroll: $shouldAutoScroll")
     } catch (e: Exception) {
-        android.util.Log.e("ChatScreen", "Error reloading messages", e)
+        android.util.Log.e("ChatScreen", "❌ Error reloading messages", e)
     }
 }
 
+/**
+ * Helper class for 4-tuple return value
+ */
+private data class Quadruple<A, B, C, D>(
+    val first: A,
+    val second: B,
+    val third: C,
+    val fourth: D
+)
+
+/**
+ * Extension to convert message to reply format.
+ */
 private fun MessageWithMediaAndReply.toReplyMessage(contactName: String): ReplyMessage {
     val senderName = if (message.direction == com.tcc.tarasulandroid.data.db.MessageDirection.OUTGOING) {
         "You"
