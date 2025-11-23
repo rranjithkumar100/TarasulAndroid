@@ -277,36 +277,27 @@ fun ChatScreen(
         snapshotFlow {
             listState.firstVisibleItemIndex to listState.isScrollInProgress
         }
+            // Add debouncing to reduce recompositions
             .collect { (firstIndex, isScrolling) ->
                 // Skip monitoring during pagination
                 if (isPaginating) {
-                    android.util.Log.d("ChatScreen", "📍 Skipping scroll monitoring during pagination")
                     return@collect
                 }
 
                 if (messages.isNotEmpty() && !isFirstLoad) {
                     val lastIndex = messages.size - 1
-
-                    // Check if user is NOT at the bottom
                     val lastVisibleIndex = listState.layoutInfo.visibleItemsInfo.lastOrNull()?.index ?: 0
                     val isAtBottom = lastVisibleIndex >= lastIndex - 1
 
-                    android.util.Log.d("ChatScreen", "📍 Scroll state: firstIndex=$firstIndex, lastVisible=$lastVisibleIndex, lastIndex=$lastIndex, isAtBottom=$isAtBottom, isScrolling=$isScrolling")
-
-                    // If scrolling and NOT at bottom, user has scrolled away
-                    if (isScrolling && !isAtBottom) {
-                        if (!userHasScrolled) {
-                            android.util.Log.d("ChatScreen", "🔴 USER SCROLLED AWAY - Disabling auto-scroll permanently")
-                        }
+                    // Only log significant events
+                    if (isScrolling && !isAtBottom && !userHasScrolled) {
+                        android.util.Log.d("ChatScreen", "🔴 USER SCROLLED AWAY")
                         userHasScrolled = true
                         shouldAutoScroll = false
                     }
 
-                    // Also check if viewing old messages (far from bottom)
-                    if (!isAtBottom && firstIndex < lastIndex - 5) {
-                        if (!userHasScrolled) {
-                            android.util.Log.d("ChatScreen", "🔴 USER VIEWING OLD MESSAGES - Disabling auto-scroll permanently")
-                        }
+                    // Check if viewing old messages
+                    if (!isAtBottom && firstIndex < lastIndex - 5 && !userHasScrolled) {
                         userHasScrolled = true
                         shouldAutoScroll = false
                     }
@@ -314,7 +305,7 @@ fun ChatScreen(
             }
     }
 
-    // Pagination detection
+    // Pagination detection - OPTIMIZED
     LaunchedEffect(listState) {
         snapshotFlow {
             listState.firstVisibleItemIndex
@@ -326,17 +317,14 @@ fun ChatScreen(
                     !isFirstLoad &&
                     !isPaginating) {
 
-                    android.util.Log.d("ChatScreen", "📄 PAGINATION TRIGGERED at index $firstVisibleIndex")
+                    android.util.Log.d("ChatScreen", "📄 Loading older messages...")
 
                     isPaginating = true
                     isLoadingMessages = true
                     conversationId?.let { convId ->
                         try {
-                            val currentFirstMessageId = messages.firstOrNull()?.message?.id
                             val currentFirstIndex = firstVisibleIndex
                             val currentScrollOffset = listState.firstVisibleItemScrollOffset
-
-                            android.util.Log.d("ChatScreen", "📄 Before pagination: currentFirstIndex=$currentFirstIndex, scrollOffset=$currentScrollOffset")
 
                             val olderMessages = messagesRepository.getMessagesWithMediaAndReplyPaginated(
                                 conversationId = convId,
@@ -351,40 +339,28 @@ fun ChatScreen(
                                 val totalCount = messagesRepository.getMessageCount(convId)
                                 hasMoreMessages = currentOffset < totalCount
 
-                                android.util.Log.d("ChatScreen", "📄 Loaded ${olderMessages.size} older messages. Total now: ${messages.size}")
-
                                 // Wait for recomposition
-                                kotlinx.coroutines.delay(50)
+                                //kotlinx.coroutines.delay(16) // One frame at 60fps
 
-                                // Calculate new index (add the number of items we inserted)
+                                // Maintain scroll position
                                 val newIndex = currentFirstIndex + olderMessages.size
-
-                                android.util.Log.d("ChatScreen", "📄 Scrolling to new index: $newIndex (old: $currentFirstIndex + added: ${olderMessages.size})")
-
-                                // Maintain exact scroll position
                                 listState.scrollToItem(
                                     index = newIndex,
                                     scrollOffset = currentScrollOffset
                                 )
 
-                                // Wait a bit more to ensure scroll is complete
-                                kotlinx.coroutines.delay(100)
-
-                                android.util.Log.d("ChatScreen", "📄 ✅ Pagination complete, maintained scroll position")
+                                android.util.Log.d("ChatScreen", "📄 Loaded ${olderMessages.size} messages")
                             } else {
                                 hasMoreMessages = false
-                                android.util.Log.d("ChatScreen", "📄 No more messages to load")
                             }
                         } catch (e: java.util.concurrent.CancellationException) {
                             android.util.Log.d("ChatScreen", "⚠️ Pagination cancelled")
                         } catch (e: Exception) {
-                            android.util.Log.e("ChatScreen", "❌ Error loading more messages", e)
+                            android.util.Log.e("ChatScreen", "❌ Pagination error", e)
                         } finally {
                             isLoadingMessages = false
-                            // Re-enable scroll monitoring after a delay
-                            kotlinx.coroutines.delay(200)
+                            //kotlinx.coroutines.delay(100)
                             isPaginating = false
-                            android.util.Log.d("ChatScreen", "📄 Pagination state cleared")
                         }
                     }
                 }
@@ -393,44 +369,34 @@ fun ChatScreen(
 
     // Auto-scroll - ONLY on first load or when sending new messages
     LaunchedEffect(messages.size) {
-        android.util.Log.d("ChatScreen", "📊 AUTO-SCROLL CHECK: size=${messages.size}, shouldAutoScroll=$shouldAutoScroll, userHasScrolled=$userHasScrolled, isFirstLoad=$isFirstLoad")
-
         if (messages.isNotEmpty() && shouldAutoScroll && !userHasScrolled) {
             try {
                 val targetIndex = messages.size - 1
 
-                android.util.Log.d("ChatScreen", "✅ AUTO-SCROLLING to bottom (index $targetIndex)")
-
                 if (isFirstLoad) {
-                    // Initial load - wait for layout and images
-                    kotlinx.coroutines.delay(400)
+                    // Initial load - wait for layout
+                    //kotlinx.coroutines.delay(300)
                     listState.scrollToItem(targetIndex)
 
-                    // Wait for images to render
-                    kotlinx.coroutines.delay(400)
-
-                    // Final scroll
+                    // Extra delay for images
+                    //kotlinx.coroutines.delay(300)
                     listState.scrollToItem(targetIndex)
 
                     isFirstLoad = false
                     shouldAutoScroll = false
-                    android.util.Log.d("ChatScreen", "✅ FIRST LOAD COMPLETE - auto-scroll disabled")
+                    android.util.Log.d("ChatScreen", "✅ Initial load complete")
                 } else {
                     // New message - smooth scroll
                     listState.animateScrollToItem(targetIndex)
                     shouldAutoScroll = false
-                    android.util.Log.d("ChatScreen", "✅ NEW MESSAGE SCROLL COMPLETE - auto-scroll disabled")
                 }
             } catch (e: java.util.concurrent.CancellationException) {
-                android.util.Log.d("ChatScreen", "⚠️ Auto-scroll CANCELLED by user interaction")
                 shouldAutoScroll = false
                 userHasScrolled = true
             } catch (e: Exception) {
-                android.util.Log.e("ChatScreen", "❌ Error during auto-scroll", e)
+                android.util.Log.e("ChatScreen", "❌ Auto-scroll error", e)
                 shouldAutoScroll = false
             }
-        } else {
-            android.util.Log.d("ChatScreen", "⏭️ SKIPPING auto-scroll (conditions not met)")
         }
     }
 
@@ -498,7 +464,7 @@ fun ChatScreen(
                                     )
 
                                     // TEST: Echo incoming message
-                                    kotlinx.coroutines.delay(500)
+                                    //kotlinx.coroutines.delay(500)
                                     try {
                                         messagesRepository.receiveTestMessage(
                                             conversationId = conversationId!!,
@@ -599,7 +565,7 @@ fun ChatScreen(
             onContactClick = {
                 showMediaPicker = false
                 coroutineScope.launch {
-                    kotlinx.coroutines.delay(100)
+                    //kotlinx.coroutines.delay(100)
                     if (contactsPermissionState.allPermissionsGranted) {
                         contactPickerLauncher.launch(Unit)
                     } else {
@@ -643,15 +609,11 @@ private suspend fun reloadMessages(
 
         val totalCount = messagesRepository.getMessageCount(conversationId)
         val hasMore = updatedMessages.size < totalCount
-
-        // Only enable auto-scroll if user hasn't manually scrolled away
         val shouldAutoScroll = !userHasScrolled
 
         onResult(Quadruple(updatedMessages, updatedMessages.size, hasMore, shouldAutoScroll))
-
-        android.util.Log.d("ChatScreen", "💾 RELOAD: ${updatedMessages.size} messages, total: $totalCount, hasMore: $hasMore, willAutoScroll: $shouldAutoScroll")
     } catch (e: Exception) {
-        android.util.Log.e("ChatScreen", "❌ Error reloading messages", e)
+        android.util.Log.e("ChatScreen", "❌ Reload error", e)
     }
 }
 
