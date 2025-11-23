@@ -5,6 +5,7 @@ import com.tcc.tarasulandroid.data.db.*
 import com.tcc.tarasulandroid.data.encryption.MessageEncryption
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.withContext
 import java.util.*

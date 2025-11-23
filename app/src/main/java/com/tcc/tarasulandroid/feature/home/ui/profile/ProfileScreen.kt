@@ -134,7 +134,7 @@ fun ProfileScreen(
                     subtitle = stringResource(R.string.dark_theme_desc),
                     trailing = {
                         Switch(
-                            checked = isDarkTheme,
+                            checked = isDarkTheme == true,
                             onCheckedChange = { viewModel.setDarkTheme(it) }
                         )
                     }
