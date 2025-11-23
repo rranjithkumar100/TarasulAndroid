@@ -482,6 +482,60 @@ class MessagesRepository @Inject constructor(
     }
     
     /**
+     * Receive a test message (for development/testing only)
+     * This creates an incoming message as if it came from the contact
+     */
+    suspend fun receiveTestMessage(
+        conversationId: String,
+        senderId: String,
+        content: String
+    ) = withContext(Dispatchers.IO) {
+        android.util.Log.d("MessagesRepository", "receiveTestMessage called - conversationId: $conversationId, senderId: $senderId, content: $content")
+
+        // Check if encryption is enabled for this conversation
+        val conversation = messagesDao.getConversationById(conversationId)
+        android.util.Log.d("MessagesRepository", "conversation found: ${conversation != null}")
+
+        val isEncrypted = conversation?.isEncryptionEnabled ?: false
+
+        val messageContent = if (isEncrypted) {
+            val key = getEncryptionKey(conversationId)
+            MessageEncryption.encrypt(content, key)
+        } else {
+            content
+        }
+
+        val message = MessageEntity(
+            id = UUID.randomUUID().toString(),
+            conversationId = conversationId,
+            senderId = senderId,
+            recipientId = securePreferencesManager.getUserEmail() ?: "me",
+            content = messageContent,
+            isEncrypted = isEncrypted,
+            timestamp = System.currentTimeMillis(),
+            isSent = true,
+            isDelivered = true,
+            isRead = false,
+            isMine = false,
+            direction = MessageDirection.INCOMING,
+            status = MessageStatus.DELIVERED,
+            replyToMessageId = null
+        )
+
+        android.util.Log.d("MessagesRepository", "Inserting test incoming message: ${message.id}")
+        messagesDao.insertMessage(message)
+        android.util.Log.d("MessagesRepository", "Test incoming message inserted successfully")
+
+        // Update conversation with last message
+        messagesDao.updateConversationLastMessage(
+            conversationId = conversationId,
+            lastMessage = if (isEncrypted) messageContent else content,
+            lastMessageTime = message.timestamp
+        )
+        android.util.Log.d("MessagesRepository", "Conversation updated with test incoming message")
+    }
+
+    /**
      * Get or generate encryption key for a conversation
      */
     private fun getEncryptionKey(conversationId: String): SecretKey {

@@ -112,6 +112,9 @@ dependencies {
     // Zoomable image for full-screen preview with pinch-to-zoom
     implementation("me.saket.telephoto:zoomable-image-coil:0.7.1")
     
+    // OTP Input Widget
+//    implementation("io.github.alexstyl:compose-otp:1.0.0")
+
     testImplementation(libs.junit)
     testImplementation(libs.mockwebserver)
     testImplementation(libs.kotlinx.coroutines.test)

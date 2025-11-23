@@ -157,4 +157,13 @@
     <string name="actions">Actions</string>
     <string name="block_contact">Block Contact</string>
     <string name="report_contact">Report Contact</string>
+
+    <!-- OTP Verification Screen -->
+    <string name="verify_otp">Verify OTP</string>
+    <string name="enter_verification_code">Enter Verification Code</string>
+    <string name="otp_subtitle">We\'ve sent a verification code to your email</string>
+    <string name="verify">Verify</string>
+    <string name="resend_code">Resend Code</string>
+    <string name="resend_code_in">Resend code in %s sec</string>
+    <string name="otp_test_note">For testing, use OTP: 1234</string>
 </resources>
