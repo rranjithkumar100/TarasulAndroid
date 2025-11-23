@@ -42,7 +42,7 @@ class MessagesRepository @Inject constructor(
                     conversation
                 }
             }
-        }
+        }.flowOn(Dispatchers.Default)
     }
     
     /**
@@ -63,7 +63,7 @@ class MessagesRepository @Inject constructor(
                     message
                 }
             }
-        }
+        }.flowOn(Dispatchers.Default)
     }
     
     /**
@@ -89,7 +89,7 @@ class MessagesRepository @Inject constructor(
                     messageWithMedia
                 }
             }
-        }
+        }.flowOn(Dispatchers.Default)
     }
     
     /**
@@ -199,7 +199,7 @@ class MessagesRepository @Inject constructor(
                     messageWithReply
                 }
             }
-        }
+        }.flowOn(Dispatchers.Default)
     }
     
     /**

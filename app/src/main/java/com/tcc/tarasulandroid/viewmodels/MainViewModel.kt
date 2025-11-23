@@ -18,11 +18,12 @@ class MainViewModel @Inject constructor(
     private val securePreferencesManager: SecurePreferencesManager
 ) : ViewModel() {
 
-    val isDarkTheme: StateFlow<Boolean> = settingsRepository.isDarkTheme
+    val isDarkTheme: StateFlow<Boolean?> = settingsRepository.isDarkTheme
+        .map { it as Boolean? }
         .stateIn(
             scope = viewModelScope,
-            started = SharingStarted.WhileSubscribed(5000),
-            initialValue = false
+            started = SharingStarted.Eagerly,
+            initialValue = null
         )
     
     private val _logoutEvent = MutableStateFlow(false)
