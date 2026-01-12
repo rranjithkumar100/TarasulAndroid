@@ -12,6 +12,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.painterResource
@@ -257,15 +258,24 @@ private fun ContactItem(
 
 @Composable
 private fun formatTime(timestamp: Long): String {
-    val context = LocalContext.current
     val now = System.currentTimeMillis()
     val diff = now - timestamp
     
     return when {
-        diff < 60000 -> context.getString(R.string.just_now)
+        diff < 60000 -> stringResource(R.string.just_now)
         diff < 3600000 -> "${diff / 60000}m"
         diff < 86400000 -> "${diff / 3600000}h"
-        diff < 604800000 -> SimpleDateFormat("EEE", Locale.getDefault()).format(Date(timestamp))
-        else -> SimpleDateFormat("MMM dd", Locale.getDefault()).format(Date(timestamp))
+        else -> {
+             val date = Date(timestamp)
+             if (diff < 604800000) {
+                 // SimpleDateFormat is not efficient to create every time, but for now we stick to standard Android formatters
+                 // or simpler approach. "EEE" is Day of week.
+                 val sdf = remember { SimpleDateFormat("EEE", Locale.getDefault()) }
+                 sdf.format(date)
+             } else {
+                 val sdf = remember { SimpleDateFormat("MMM dd", Locale.getDefault()) }
+                 sdf.format(date)
+             }
+        }
     }
 }

@@ -55,12 +55,19 @@ class MainActivity : BaseActivity() {
         
         setContent {
             val isDarkTheme by viewModel.isDarkTheme.collectAsState()
-            TarasulTheme(darkTheme = isDarkTheme) {
-                NavGraph(
-                    startDestination = if (isLoggedIn) "home" else "login",
-                    modifier = Modifier.fillMaxSize()
-                )
+
+            if (isDarkTheme != null) {
+                TarasulTheme(darkTheme = isDarkTheme == true) {
+                    NavGraph(
+                        startDestination = if (isLoggedIn) "home" else "login",
+                        modifier = Modifier.fillMaxSize()
+                    )
+                }
             }
+            // While isDarkTheme is null (loading), we show nothing (white/default screen)
+            // or we could show a splash screen here.
+            // Since the theme is loading very fast usually, this avoids the flicker.
+            // For better UX, we should rely on the system Splash Screen API which handles this grace period.
         }
     }
     

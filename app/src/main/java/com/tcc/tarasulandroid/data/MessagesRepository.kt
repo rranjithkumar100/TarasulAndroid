@@ -5,6 +5,7 @@ import com.tcc.tarasulandroid.data.db.*
 import com.tcc.tarasulandroid.data.encryption.MessageEncryption
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.withContext
 import java.util.*
@@ -42,7 +43,7 @@ class MessagesRepository @Inject constructor(
                     conversation
                 }
             }
-        }
+        }.flowOn(Dispatchers.Default)
     }
     
     /**
@@ -63,7 +64,7 @@ class MessagesRepository @Inject constructor(
                     message
                 }
             }
-        }
+        }.flowOn(Dispatchers.Default)
     }
     
     /**
@@ -89,7 +90,7 @@ class MessagesRepository @Inject constructor(
                     messageWithMedia
                 }
             }
-        }
+        }.flowOn(Dispatchers.Default)
     }
     
     /**
@@ -199,7 +200,7 @@ class MessagesRepository @Inject constructor(
                     messageWithReply
                 }
             }
-        }
+        }.flowOn(Dispatchers.Default)
     }
     
     /**

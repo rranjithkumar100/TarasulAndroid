@@ -207,7 +207,7 @@ private fun VideoMessageContent(
             .clip(RoundedCornerShape(8.dp))
             .background(MaterialTheme.colorScheme.surfaceVariant)
             .clickable(enabled = canPlay) {
-                if (canPlay && videoFile != null) {
+                if (canPlay) {
                     // Check if file still exists
                     if (!videoFile.exists()) {
                         android.widget.Toast.makeText(
